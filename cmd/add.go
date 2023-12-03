@@ -25,13 +25,13 @@ var addCmd = &cobra.Command{
 			result = db.Create(&service)
 		}
 
-		checkSimpleError(result.Error, fmt.Sprintf("unable to create service: %v", result.Error))
+		checkSimpleError(result.Error, "unable to create service")
 
 		var account models.Account
 		var count int64
 		login := cli.GetUserInput("Enter login: ")
 		result = db.Model(&account).Where("login = ? AND service_id = ?", login, service.ID).Count(&count)
-		checkSimpleError(result.Error, fmt.Sprintf("unable to check account existance: %v", result.Error))
+		checkSimpleError(result.Error, "unable to check account existence")
 
 		if count > 0 {
 			log.Fatalf(
@@ -47,14 +47,14 @@ var addCmd = &cobra.Command{
 		password.Encrypted = userPassword // TODO encryption
 
 		result = db.Create(&password)
-		checkSimpleError(result.Error, fmt.Sprintf("unable to save password: %v", result.Error))
+		checkSimpleError(result.Error, "unable to save password")
 
 		account.Password = password
 		account.Service = service
 		account.Login = login
 
 		result = db.Create(&account)
-		checkSimpleError(result.Error, fmt.Sprintf("unable to create account: %v", result.Error))
+		checkSimpleError(result.Error, "unable to create account")
 
 		fmt.Printf("Successfully added password for account with login %q at %q", login, serviceName)
 	},
@@ -66,6 +66,6 @@ func init() {
 
 func checkSimpleError(err error, msg string) {
 	if err != nil {
-		log.Fatal(msg)
+		log.Fatalf("%s: %v", msg, err)
 	}
 }
