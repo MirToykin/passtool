@@ -40,9 +40,7 @@ var addCmd = &cobra.Command{
 
 		var password models.Password
 		userPassword := cli.GetUserInput("Enter password: ")
-		secretKey, err := cli.GetSensitiveUserInput("Enter secret pass phrase: ")
-
-		checkSimpleError(err, "unable to get passphrase")
+		secretKey := getPassPhrase()
 
 		encryptPassword(&password, userPassword, secretKey)
 		saveAccountWithPassword(&account, &password)
@@ -71,6 +69,12 @@ func getAccountsCount(account *models.Account, login string, serviceID uint) int
 	result := db.Model(&account).Where("login = ? AND service_id = ?", login, serviceID).Count(&count)
 	checkSimpleError(result.Error, "unable to check account existence")
 	return count
+}
+
+func getPassPhrase() string {
+	secretKey, err := cli.GetSensitiveUserInput("Enter secret pass phrase: ")
+	checkSimpleError(err, "unable to get passphrase")
+	return secretKey
 }
 
 func saveAccountWithPassword(account *models.Account, password *models.Password) {
