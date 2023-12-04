@@ -36,7 +36,7 @@ var addCmd = &cobra.Command{
 
 		var password models.Password
 		userPassword := cli.GetUserInput("Enter password: ")
-		secretKey := getPassPhrase()
+		secretKey := getPassPhraseWithConfirmation()
 
 		encryptPassword(&password, userPassword, secretKey)
 		saveAccountWithPassword(&account, &password)

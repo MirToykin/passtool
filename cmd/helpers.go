@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"errors"
+	"fmt"
 	"github.com/MirToykin/passtool/internal/crypto"
 	"github.com/MirToykin/passtool/internal/lib/cli"
 	"github.com/MirToykin/passtool/internal/storage/models"
@@ -31,10 +32,29 @@ func getAccountsCount(account *models.Account, login string, serviceID uint) int
 }
 
 // getPassPhrase returns pass phrase given by user (handle possible errors)
-func getPassPhrase() string {
-	secretKey, err := cli.GetSensitiveUserInput("Enter secret pass phrase: ")
+func getPassPhrase(confirm bool) string {
+	postfix := ""
+	if confirm {
+		postfix = " again"
+	}
+
+	secretKey, err := cli.GetSensitiveUserInput(fmt.Sprintf("Enter secret pass phrase%s: ", postfix))
 	checkSimpleError(err, "unable to get passphrase")
 	return secretKey
+}
+
+// getPassPhraseWithConfirmation handles getting pass phrase with confirmation
+func getPassPhraseWithConfirmation() string {
+	for {
+		pass1 := getPassPhrase(false)
+		pass2 := getPassPhrase(true)
+
+		if pass1 != pass2 {
+			fmt.Println("Phrases are not equal, try again")
+		} else {
+			return pass1
+		}
+	}
 }
 
 // saveAccountWithPassword performs transactional save of password and account to database
