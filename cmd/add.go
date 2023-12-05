@@ -5,7 +5,6 @@ import (
 	"github.com/MirToykin/passtool/internal/lib/cli"
 	"github.com/MirToykin/passtool/internal/storage/models"
 	"github.com/spf13/cobra"
-	"log"
 )
 
 // addCmd represents the add command
@@ -19,17 +18,7 @@ var addCmd = &cobra.Command{
 		fetchOrCreateService(&service, serviceName)
 
 		var account models.Account
-		login := cli.GetUserInput("Enter login: ")
-		count := getAccountsCount(&account, login, service.ID)
-
-		if count > 0 {
-			log.Fatalf(
-				"Account with login %q at %q already exists, to update it use %q command",
-				login,
-				serviceName,
-				updateCmd.Use,
-			)
-		}
+		login := requestUniqueLogin(&account, service.ID, serviceName)
 
 		account.Service = service
 		account.Login = login

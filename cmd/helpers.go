@@ -32,6 +32,25 @@ func getAccountsCount(account *models.Account, login string, serviceID uint) int
 	return count
 }
 
+// requestUniqueLogin request login from user. If login already exists for the given service - retries.
+func requestUniqueLogin(account *models.Account, serviceID uint, serviceName string) string {
+	for {
+		login := cli.GetUserInput("Enter login: ")
+		count := getAccountsCount(account, login, serviceID)
+
+		if count > 0 {
+			log.Printf(
+				"Account with login %q at %q already exists, to update it use %q command. Use another login.",
+				login,
+				serviceName,
+				updateCmd.Use,
+			)
+		} else {
+			return login
+		}
+	}
+}
+
 // getPassPhrase returns pass phrase given by user (handle possible errors)
 func getPassPhrase(confirm bool) string {
 	postfix := ""
