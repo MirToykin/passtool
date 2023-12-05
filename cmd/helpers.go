@@ -103,6 +103,7 @@ func encryptPassword(password *models.Password, userPassword, encryptionKey stri
 	password.Salt = salt
 }
 
+// PrintServiceRequirements prints the information for service to be able to work
 func PrintServiceRequirements(cfg *config.Config) {
 	fmt.Println()
 	fmt.Println("For the app to work you need to create the following environment variables:")

@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// GetUserInput gets input from user terminal with retrying if input is empty.
 func GetUserInput(prompt string) string {
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -23,6 +24,7 @@ func GetUserInput(prompt string) string {
 	}
 }
 
+// GetSensitiveUserInput gets input from user terminal with retrying if input is empty. The input is invisible for user.
 func GetSensitiveUserInput(prompt string) (string, error) {
 	for {
 		fmt.Print(prompt)

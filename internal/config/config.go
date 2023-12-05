@@ -13,6 +13,7 @@ type Config struct {
 	EnvVariables     []EnvVar
 }
 
+// IsValid checks if config valid
 func (c Config) IsValid() bool {
 	for _, ev := range c.EnvVariables {
 		if ev.Required && ev.Value == "" {
@@ -23,6 +24,7 @@ func (c Config) IsValid() bool {
 	return true
 }
 
+// filterVars returns EnvVar objects filtered by Required key
 func (c Config) filterVars(required bool) (requiredVars []EnvVar) {
 	for _, ev := range c.EnvVariables {
 		if ev.Required == required {
@@ -33,10 +35,12 @@ func (c Config) filterVars(required bool) (requiredVars []EnvVar) {
 	return
 }
 
+// GetRequiredEnvVars return EnvVar objects for required ENV variables
 func (c Config) GetRequiredEnvVars() []EnvVar {
 	return c.filterVars(true)
 }
 
+// GetOptionalEnvVars return EnvVar objects for optional ENV variables
 func (c Config) GetOptionalEnvVars() []EnvVar {
 	return c.filterVars(false)
 }
@@ -49,6 +53,7 @@ type GeneratorSettings struct {
 	AllowRepeat bool
 }
 
+// Load creates and returns pointer to Config
 func Load() *Config {
 	storageVar.Value = ensureTrailingSlash(os.Getenv(storageEnv)) + storageFileName
 	backupIndexVar.Value = os.Getenv(backupIndexEnv)

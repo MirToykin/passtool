@@ -11,10 +11,12 @@ import (
 	"io"
 )
 
+// DeriveKey creates encryption key from passphrase
 func DeriveKey(passphrase, salt string, keyLen int) string {
 	return string(pbkdf2.Key([]byte(passphrase), []byte(salt), 10000, keyLen, sha256.New))
 }
 
+// Encrypt encrypts the given text with the given key
 func Encrypt(key, text string) (string, error) {
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
@@ -34,6 +36,7 @@ func Encrypt(key, text string) (string, error) {
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
+// Decrypt decrypts the given encrypted text with the given key
 func Decrypt(key, cryptoText string) (string, error) {
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {

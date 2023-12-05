@@ -21,6 +21,7 @@ type EnvVar struct {
 	Required    bool
 }
 
+// IntVal casts EnvVar.Value to uint64 and returns it. If fails then stops the execution with log.
 func (ev EnvVar) IntVal() uint64 {
 	if ev.Type != EnvInt || ev.Value == "" {
 		return 0

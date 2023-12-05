@@ -10,6 +10,7 @@ var ServiceCmd = &cobra.Command{
 	Short: "Service requirements",
 	Long:  `Prints service usage requirements`,
 	Run: func(cmd *cobra.Command, args []string) {
+
 		_ = cmd.Help()
 	},
 }

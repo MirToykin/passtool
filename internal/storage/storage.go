@@ -8,6 +8,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
+// New returns a pointer to gorm database and an error
 func New(storagePath string) (*gorm.DB, error) {
 	db, err := gorm.Open(sqlite.Open(storagePath), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Silent),
