@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/MirToykin/passtool/cmd/service"
+	"github.com/MirToykin/passtool/internal/config"
 	"gorm.io/gorm"
 	"log"
 	"os"
@@ -20,12 +21,13 @@ var rootCmd = &cobra.Command{
 }
 
 var db *gorm.DB
+var cfg *config.Config
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute(database *gorm.DB) {
+func Execute(database *gorm.DB, c *config.Config) {
 	db = database
-
+	cfg = c
 	sqlDb, err := db.DB()
 	if err != nil {
 		log.Fatalf("cant get SQL DB: %v", err)

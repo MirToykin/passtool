@@ -7,8 +7,8 @@ import (
 // ServiceCmd represents the service command
 var ServiceCmd = &cobra.Command{
 	Use:   "service",
-	Short: "Service settings",
-	Long:  ``,
+	Short: "Service requirements",
+	Long:  `Prints service usage requirements`,
 	Run: func(cmd *cobra.Command, args []string) {
 		_ = cmd.Help()
 	},

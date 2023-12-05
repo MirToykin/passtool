@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"github.com/MirToykin/passtool/internal/config"
 	"github.com/MirToykin/passtool/internal/crypto"
 	"github.com/MirToykin/passtool/internal/lib/cli"
 	"github.com/MirToykin/passtool/internal/storage/models"
@@ -84,11 +85,15 @@ func checkSimpleError(err error, msg string) {
 
 // encryptPassword sets encrypted password and salt for given Password instance
 func encryptPassword(password *models.Password, userPassword, encryptionKey string) {
-	// TODO вынести параметры генерации salt в конфиг
-	salt, err := passGenerator.Generate(64, 10, 10, false, false)
+	salt, err := passGenerator.Generate(
+		cfg.SaltSettings.Length,
+		cfg.SaltSettings.NumDigits,
+		cfg.SaltSettings.NumSymbols,
+		cfg.SaltSettings.NoUpper,
+		cfg.SaltSettings.AllowRepeat)
 	checkSimpleError(err, "unable to get salt")
 
-	keyLen := 32 // TODO вынести в конфиг
+	keyLen := cfg.SecretKeyLength
 	key := crypto.DeriveKey(encryptionKey, salt, keyLen)
 
 	encryptedPassword, err := crypto.Encrypt(key, userPassword)
@@ -96,4 +101,20 @@ func encryptPassword(password *models.Password, userPassword, encryptionKey stri
 
 	password.Encrypted = encryptedPassword
 	password.Salt = salt
+}
+
+func PrintServiceRequirements(cfg *config.Config) {
+	fmt.Println()
+	fmt.Println("For the app to work you need to create the following environment variables:")
+	for _, ev := range cfg.GetRequiredEnvVars() {
+		fmt.Println(fmt.Sprintf("  %q - %s", ev.Name, ev.Description))
+	}
+
+	fmt.Println()
+
+	fmt.Println("You might also want to set the following optional environment variables:")
+	for _, ev := range cfg.GetOptionalEnvVars() {
+		fmt.Println(fmt.Sprintf("  %q - %s", ev.Name, ev.Description))
+	}
+	fmt.Println()
 }
