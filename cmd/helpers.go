@@ -91,7 +91,7 @@ func getPassPhrase(confirm bool) string {
 		postfix = " again"
 	}
 
-	secretKey, err := cli.GetSensitiveUserInput(fmt.Sprintf("Enter secret pass phrase%s: ", postfix), printer)
+	secretKey, err := cli.GetSensitiveUserInput(fmt.Sprintf("Enter secret %s: ", postfix), printer)
 	checkSimpleError(err, "unable to get passphrase")
 	return secretKey
 }

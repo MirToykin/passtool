@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/MirToykin/passtool/internal/lib/cli"
 	"github.com/MirToykin/passtool/internal/storage/models"
 	"github.com/spf13/cobra"
@@ -30,7 +29,7 @@ var addCmd = &cobra.Command{
 		encryptPassword(&password, userPassword, secretKey)
 		saveAccountWithPassword(&account, &password)
 
-		fmt.Printf("Successfully added password for account with login %q at %q", login, serviceName)
+		printer.Success("Successfully added password for account with login %q at %q", login, serviceName)
 	},
 }
 
