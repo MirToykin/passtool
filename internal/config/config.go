@@ -55,7 +55,7 @@ type GeneratorSettings struct {
 
 // Load creates and returns pointer to Config
 func Load() *Config {
-	storageVar.Value = ensureTrailingSlash(os.Getenv(storageEnv)) + storageFileName
+	storageVar.Value = os.Getenv(storageEnv)
 	backupIndexVar.Value = os.Getenv(backupIndexEnv)
 	backupIndex := backupIndexVar.IntVal()
 
@@ -64,7 +64,7 @@ func Load() *Config {
 	}
 
 	var cfg = Config{
-		StoragePath:     storageVar.Value,
+		StoragePath:     ensureTrailingSlash(storageVar.Value) + storageFileName,
 		BackupIndex:     backupIndex,
 		SecretKeyLength: 32,
 		PasswordSettings: GeneratorSettings{

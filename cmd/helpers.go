@@ -35,7 +35,7 @@ func getAccountsCount(account *models.Account, login string, serviceID uint) int
 // requestUniqueLogin request login from user. If login already exists for the given service - retries.
 func requestUniqueLogin(account *models.Account, serviceID uint, serviceName string) string {
 	for {
-		login := cli.GetUserInput("Enter login: ")
+		login := cli.GetUserInput("Enter login: ", prt)
 		count := getAccountsCount(account, login, serviceID)
 
 		if count > 0 {
@@ -58,7 +58,7 @@ func getPassPhrase(confirm bool) string {
 		postfix = " again"
 	}
 
-	secretKey, err := cli.GetSensitiveUserInput(fmt.Sprintf("Enter secret pass phrase%s: ", postfix))
+	secretKey, err := cli.GetSensitiveUserInput(fmt.Sprintf("Enter secret pass phrase%s: ", postfix), prt)
 	checkSimpleError(err, "unable to get passphrase")
 	return secretKey
 }
@@ -123,16 +123,16 @@ func encryptPassword(password *models.Password, userPassword, encryptionKey stri
 }
 
 // PrintServiceRequirements prints the information for service to be able to work
-func PrintServiceRequirements(cfg *config.Config) {
+func PrintServiceRequirements(cfg *config.Config, printer Print) {
 	fmt.Println()
-	fmt.Println("For the app to work you need to create the following environment variables:")
+	printer.Info("For the app to work you need to add the following environment variables:")
 	for _, ev := range cfg.GetRequiredEnvVars() {
 		fmt.Println(fmt.Sprintf("  %q - %s", ev.Name, ev.Description))
 	}
 
 	fmt.Println()
 
-	fmt.Println("You might also want to set the following optional environment variables:")
+	printer.Info("You might also want to add the following optional environment variables:")
 	for _, ev := range cfg.GetOptionalEnvVars() {
 		fmt.Println(fmt.Sprintf("  %q - %s", ev.Name, ev.Description))
 	}

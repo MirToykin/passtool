@@ -3,21 +3,22 @@ package main
 import (
 	"github.com/MirToykin/passtool/cmd"
 	"github.com/MirToykin/passtool/internal/config"
+	out "github.com/MirToykin/passtool/internal/output"
 	"github.com/MirToykin/passtool/internal/storage"
-	"log"
 	"os"
 )
 
 func main() {
+	prt := out.New()
 	cfg := config.Load()
 	if !cfg.IsValid() {
-		cmd.PrintServiceRequirements(cfg)
+		cmd.PrintServiceRequirements(cfg, prt)
 		os.Exit(0)
 	}
 
 	db, err := storage.New(cfg.StoragePath)
 	if err != nil {
-		log.Fatalf("unable to initialize DB: %v", err)
+		prt.ErrorWithExit("unable to initialize DB: %v", err)
 	}
-	cmd.Execute(db, cfg)
+	cmd.Execute(db, cfg, prt)
 }

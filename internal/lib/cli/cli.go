@@ -8,16 +8,21 @@ import (
 	"strings"
 )
 
+type Print interface {
+	Info(msg string, a ...interface{})
+	Warning(msg string, a ...interface{})
+}
+
 // GetUserInput gets input from user terminal with retrying if input is empty.
-func GetUserInput(prompt string) string {
+func GetUserInput(prompt string, prt Print) string {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Print(prompt)
+		prt.Info(prompt)
 		input, _ := reader.ReadString('\n')
 		input = strings.TrimSpace(input)
 
 		if input == "" {
-			fmt.Println("value can't be empty")
+			prt.Warning("value can't be empty")
 		} else {
 			return input
 		}
@@ -25,9 +30,9 @@ func GetUserInput(prompt string) string {
 }
 
 // GetSensitiveUserInput gets input from user terminal with retrying if input is empty. The input is invisible for user.
-func GetSensitiveUserInput(prompt string) (string, error) {
+func GetSensitiveUserInput(prompt string, prt Print) (string, error) {
 	for {
-		fmt.Print(prompt)
+		prt.Info(prompt)
 		bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {
 			return "", err
@@ -36,7 +41,7 @@ func GetSensitiveUserInput(prompt string) (string, error) {
 		fmt.Println() // Print a newline because ReadPassword does not capture the enter key
 
 		if len(bytePassword) == 0 {
-			fmt.Println("value can't be empty")
+			prt.Warning("value can't be empty")
 		} else {
 			return string(bytePassword), nil
 		}
