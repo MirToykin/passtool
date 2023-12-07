@@ -10,6 +10,8 @@ import (
 	passGenerator "github.com/sethvargo/go-password/password"
 	"gorm.io/gorm"
 	"log"
+	"sort"
+	"strconv"
 )
 
 // fetchOrCreateService fetches existing or creates new Service instance
@@ -24,8 +26,8 @@ func fetchOrCreateService(service *models.Service, serviceName string) {
 	checkSimpleError(err, "unable to create service")
 }
 
-// fetchService tries to fetch service
-func fetchService(service *models.Service, serviceName string) bool {
+// fetchServiceWithAccounts tries to fetch service
+func fetchServiceWithAccounts(service *models.Service, serviceName string) bool {
 	err := service.FetchByName(db, serviceName, true)
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -63,24 +65,36 @@ func requestUniqueLogin(account *models.Account, serviceID uint, serviceName str
 	}
 }
 
-// requestExistingLogin request login from user. If login doesn't exist for the given service - retries.
+// requestExistingAccount request login from user. If login doesn't exist for the given service - retries.
 // If succeeds - loads account by login
-func requestExistingAccount(account *models.Account, service models.Service) {
+func requestExistingAccount(service *models.Service) *models.Account {
 	for {
-		login := cli.GetUserInput("Enter login: ", printer)
-		err := account.FetchByLoginAndService(db, login, service.ID)
+		identifier := cli.GetUserInput("Enter login or serial number: ", printer)
+		var login string
 
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			printer.Warning(
-				"Account with login %q doesn't exist at service %q. Use another login.",
-				login,
-				service.Name,
-			)
+		num, err := strconv.Atoi(identifier)
+		if err != nil {
+			login = identifier
 		} else {
-			checkSimpleError(err, "unable to account")
-			return
+			account, found := service.GetAccountsMap()[num]
+			if found {
+				return &account
+			} else {
+				login = identifier
+			}
 		}
 
+		for _, acc := range service.Accounts {
+			if acc.Login == login {
+				return &acc
+			}
+		}
+
+		printer.Warning(
+			"Account with login %q doesn't exist at service %q. Use another login or correct serial number.",
+			login,
+			service.Name,
+		)
 	}
 }
 
@@ -158,19 +172,28 @@ func encryptPassword(password *models.Password, userPassword, secret string) {
 // printServiceAccounts prints accounts of the given service into console
 func printServiceAccounts(service models.Service) {
 	printer.Header("Service %q has accounts with the following logins:", service.Name)
-	for i, account := range service.Accounts {
-		fmt.Println(i+1, account.Login)
+	accMap := service.GetAccountsMap()
+	keys := make([]int, 0, len(accMap))
+
+	for key := range accMap {
+		keys = append(keys, key)
 	}
+
+	sort.Ints(keys)
+	for _, key := range keys {
+		fmt.Println(key, accMap[key].Login)
+	}
+
 	fmt.Println()
 }
 
 // requestExistingService queries for an existing service name until it gets one.
-// If succeeds - loads service by name
+// If succeeds - loads service with its accounts
 func requestExistingService(service *models.Service) {
 	for {
 		serviceName := cli.GetUserInput("Enter service name: ", printer)
 
-		ok := fetchService(service, serviceName)
+		ok := fetchServiceWithAccounts(service, serviceName)
 		if !ok {
 			printer.Warning("Service with name %q not found, try again", serviceName)
 		} else {

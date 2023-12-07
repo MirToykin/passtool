@@ -17,11 +17,13 @@ var getCmd = &cobra.Command{
 		requestExistingService(&service)
 		printServiceAccounts(service)
 
-		var account models.Account
-		requestExistingAccount(&account, service)
+		account := requestExistingAccount(&service)
+		err := account.LoadPassword(db)
+		checkSimpleError(err, "unable to load account password")
 
 		secret, err := cli.GetSensitiveUserInput("Enter secret: ", printer)
 		checkSimpleError(err, "unable to get secret")
+
 		decoded, err := account.GetDecodedPassword(secret, cfg.SecretKeyLength)
 		checkSimpleError(err, "unable to decode password")
 
