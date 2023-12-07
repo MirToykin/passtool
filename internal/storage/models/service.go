@@ -8,3 +8,10 @@ type Service struct {
 
 	Accounts []Account
 }
+
+func (s *Service) FetchByName(db *gorm.DB, name string, withAccounts bool) error {
+	if withAccounts {
+		db = db.Preload("Accounts")
+	}
+	return db.First(s, "name", name).Error
+}

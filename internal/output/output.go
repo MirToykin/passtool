@@ -25,6 +25,10 @@ func (o Out) Header(msg string, a ...interface{}) {
 	colorWrapper(color.FgMagenta)(msg+"\n", a...)
 }
 
+func (o Out) Success(msg string, a ...interface{}) {
+	colorWrapper(color.FgGreen)(msg+"\n", a...)
+}
+
 func (o Out) Warning(msg string, a ...interface{}) {
 	colorWrapper(color.FgYellow)(msg+"\n", a...)
 }

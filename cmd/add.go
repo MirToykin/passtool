@@ -14,7 +14,7 @@ var addCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		var service models.Service
-		serviceName := cli.GetUserInput("Enter service name: ", prt)
+		serviceName := cli.GetUserInput("Enter service name: ", printer)
 		fetchOrCreateService(&service, serviceName)
 
 		var account models.Account
@@ -24,7 +24,7 @@ var addCmd = &cobra.Command{
 		account.Login = login
 
 		var password models.Password
-		userPassword := cli.GetUserInput("Enter password: ", prt)
+		userPassword := cli.GetUserInput("Enter password: ", printer)
 		secretKey := getPassPhraseWithConfirmation()
 
 		encryptPassword(&password, userPassword, secretKey)
