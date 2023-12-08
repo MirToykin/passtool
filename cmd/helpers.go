@@ -116,26 +116,26 @@ func requestExistingAccount(service *models.Service) *models.Account {
 	}
 }
 
-// getPassPhrase returns pass phrase given by user (handle possible errors)
-func getPassPhrase(confirm bool) string {
+// getSecret returns secret given by user (handle possible errors)
+func getSecret(secretName string, confirm bool) string {
 	postfix := ""
 	if confirm {
 		postfix = " again"
 	}
 
-	secretKey, err := cli.GetSensitiveUserInput(fmt.Sprintf("Enter secret %s: ", postfix), printer)
-	checkSimpleErrorWithDetails(err, "unable to get passphrase", printer)
-	return secretKey
+	secret, err := cli.GetSensitiveUserInput(fmt.Sprintf("Enter %s%s: ", secretName, postfix), printer)
+	checkSimpleErrorWithDetails(err, fmt.Sprintf("unable to get %s", secretName), printer)
+	return secret
 }
 
-// getPassPhraseWithConfirmation handles getting pass phrase with confirmation
-func getPassPhraseWithConfirmation() string {
+// getSecretWithConfirmation handles getting pass phrase with confirmation
+func getSecretWithConfirmation(secretName string, retryMsg string) string {
 	for {
-		pass1 := getPassPhrase(false)
-		pass2 := getPassPhrase(true)
+		pass1 := getSecret(secretName, false)
+		pass2 := getSecret(secretName, true)
 
 		if pass1 != pass2 {
-			fmt.Println("Phrases are not equal, try again")
+			fmt.Println(retryMsg)
 		} else {
 			return pass1
 		}

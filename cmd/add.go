@@ -23,8 +23,8 @@ var addCmd = &cobra.Command{
 		account.Login = login
 
 		var password models.Password
-		userPassword := cli.GetUserInput("Enter password: ", printer)
-		secretKey := getPassPhraseWithConfirmation()
+		userPassword := getSecretWithConfirmation("password", "Passwords are not equal")
+		secretKey := getSecretWithConfirmation("secret key", "Secret keys are not equal")
 
 		encryptPassword(&password, userPassword, secretKey)
 		saveAccountWithPassword(&account, &password)
