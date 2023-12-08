@@ -18,14 +18,21 @@ func (s *Service) FetchByName(db *gorm.DB, name string, withAccounts bool) error
 	return db.First(s, "name", name).Error
 }
 
+// List prepare query of all the services and return it
+func (s *Service) List(db *gorm.DB) *gorm.DB {
+	return db.Model(Service{})
+}
+
 // GetList fetches all the services and return them
 func (s *Service) GetList(db *gorm.DB, withAccounts bool) ([]Service, error) {
 	var services []Service
+
+	db = s.List(db)
 	if withAccounts {
 		db = db.Preload("Accounts")
 	}
 
-	err := db.Model(Service{}).Find(&services).Error
+	err := db.Find(&services).Error
 
 	return services, err
 }

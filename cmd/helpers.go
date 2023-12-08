@@ -40,6 +40,10 @@ func fetchServiceWithAccounts(service *models.Service, serviceName string) bool 
 
 // printServices prints list of added services and also their accounts if withAccounts=true
 func printServices(services []models.Service, withAccounts bool, p Print) {
+	if len(services) == 0 {
+		p.Infoln("There are no added services yet")
+		return
+	}
 	p.Header("The following services were added:")
 	for i, service := range services {
 		p.Infoln("%d. %s", i+1, service.Name)

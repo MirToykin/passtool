@@ -5,6 +5,7 @@ import (
 	"github.com/MirToykin/passtool/internal/storage/models"
 	"github.com/atotto/clipboard"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 // getCmd represents the get command
@@ -14,6 +15,14 @@ var getCmd = &cobra.Command{
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		var service models.Service
+		var count int64
+		service.List(db).Count(&count)
+
+		if count == 0 {
+			printer.Infoln("There are no added services yet")
+			os.Exit(0)
+		}
+
 		requestExistingService(&service)
 		printServiceAccounts(service)
 
