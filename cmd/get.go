@@ -19,13 +19,13 @@ var getCmd = &cobra.Command{
 
 		account := requestExistingAccount(&service)
 		err := account.LoadPassword(db)
-		checkSimpleError(err, "unable to load account password")
+		checkSimpleErrorWithDetails(err, "unable to load account password", printer)
 
 		secret, err := cli.GetSensitiveUserInput("Enter secret: ", printer)
-		checkSimpleError(err, "unable to get secret")
+		checkSimpleErrorWithDetails(err, "unable to get secret", printer)
 
 		decoded, err := account.GetDecodedPassword(secret, cfg.SecretKeyLength)
-		checkSimpleError(err, "unable to decode password")
+		checkSimpleError(err, "unable to decode password", printer)
 
 		err = clipboard.WriteAll(decoded)
 		if err != nil {

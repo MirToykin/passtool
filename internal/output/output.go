@@ -13,6 +13,14 @@ func colorWrapper(colorAttr color.Attribute) func(msg string, a ...interface{}) 
 
 type Out struct{}
 
+func (o Out) Simple(msg string, a ...interface{}) {
+	colorWrapper(color.FgWhite)(msg, a...)
+}
+
+func (o Out) Simpleln(msg string, a ...interface{}) {
+	o.Simple(msg+"\n", a...)
+}
+
 func (o Out) Info(msg string, a ...interface{}) {
 	colorWrapper(color.FgBlue)(msg, a...)
 }

@@ -23,7 +23,7 @@ func fetchOrCreateService(service *models.Service, serviceName string) {
 		err = db.Create(&service).Error
 	}
 
-	checkSimpleError(err, "unable to create service")
+	checkSimpleErrorWithDetails(err, "unable to create service", printer)
 }
 
 // fetchServiceWithAccounts tries to fetch service
@@ -34,15 +34,29 @@ func fetchServiceWithAccounts(service *models.Service, serviceName string) bool 
 		return false
 	}
 
-	checkSimpleError(err, "unable to get service")
+	checkSimpleErrorWithDetails(err, "unable to get service", printer)
 	return true
+}
+
+// printServices prints list of added services and also their accounts if withAccounts=true
+func printServices(services []models.Service, withAccounts bool, p Print) {
+	p.Header("The following services were added:")
+	for i, service := range services {
+		p.Infoln("%d. %s", i+1, service.Name)
+
+		if withAccounts {
+			for _, account := range service.Accounts {
+				p.Simpleln("  - %s", account.Login)
+			}
+		}
+	}
 }
 
 // getAccountsCount returns number of accounts with a given login for a given service
 func getAccountsCount(account *models.Account, login string, serviceID uint) int64 {
 	var count int64
 	result := db.Model(&account).Where("login = ? AND service_id = ?", login, serviceID).Count(&count)
-	checkSimpleError(result.Error, "unable to check account existence")
+	checkSimpleErrorWithDetails(result.Error, "unable to check account existence", printer)
 	return count
 }
 
@@ -106,7 +120,7 @@ func getPassPhrase(confirm bool) string {
 	}
 
 	secretKey, err := cli.GetSensitiveUserInput(fmt.Sprintf("Enter secret %s: ", postfix), printer)
-	checkSimpleError(err, "unable to get passphrase")
+	checkSimpleErrorWithDetails(err, "unable to get passphrase", printer)
 	return secretKey
 }
 
@@ -139,13 +153,20 @@ func saveAccountWithPassword(account *models.Account, password *models.Password)
 
 		return nil
 	})
-	checkSimpleError(err, "unable to create password")
+	checkSimpleErrorWithDetails(err, "unable to create password", printer)
 }
 
-// checkSimpleError handles general error
-func checkSimpleError(err error, msg string) {
+// checkSimpleErrorWithDetails handles general error, and prints message with error details to the console
+func checkSimpleErrorWithDetails(err error, msg string, p Print) {
 	if err != nil {
-		printer.ErrorWithExit("%s: %v", msg, err)
+		p.ErrorWithExit("%s: %v", msg, err)
+	}
+}
+
+// checkSimpleError handles general error and prints message to the console.
+func checkSimpleError(err error, msg string, p Print) {
+	if err != nil {
+		p.ErrorWithExit(msg)
 	}
 }
 
@@ -157,13 +178,13 @@ func encryptPassword(password *models.Password, userPassword, secret string) {
 		cfg.SaltSettings.NumSymbols,
 		cfg.SaltSettings.NoUpper,
 		cfg.SaltSettings.AllowRepeat)
-	checkSimpleError(err, "unable to get salt")
+	checkSimpleErrorWithDetails(err, "unable to get salt", printer)
 
 	keyLen := cfg.SecretKeyLength
 	key := crypto.DeriveKey(secret, salt, keyLen)
 
 	encryptedPassword, err := crypto.Encrypt(key, userPassword)
-	checkSimpleError(err, "unable to encrypt the password")
+	checkSimpleErrorWithDetails(err, "unable to encrypt the password", printer)
 
 	password.Encrypted = encryptedPassword
 	password.Salt = salt

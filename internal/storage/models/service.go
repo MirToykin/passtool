@@ -18,6 +18,18 @@ func (s *Service) FetchByName(db *gorm.DB, name string, withAccounts bool) error
 	return db.First(s, "name", name).Error
 }
 
+// GetList fetches all the services and return them
+func (s *Service) GetList(db *gorm.DB, withAccounts bool) ([]Service, error) {
+	var services []Service
+	if withAccounts {
+		db = db.Preload("Accounts")
+	}
+
+	err := db.Model(Service{}).Find(&services).Error
+
+	return services, err
+}
+
 // GetAccountsMap returns map of accounts where keys are their serial starting numbers from 1
 func (s *Service) GetAccountsMap() map[int]Account {
 	aMap := make(map[int]Account)

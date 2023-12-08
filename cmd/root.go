@@ -21,6 +21,8 @@ var rootCmd = &cobra.Command{
 }
 
 type Print interface {
+	Simple(msg string, a ...interface{})
+	Simpleln(msg string, a ...interface{})
 	Info(msg string, a ...interface{})
 	Infoln(msg string, a ...interface{})
 	Success(msg string, a ...interface{})
