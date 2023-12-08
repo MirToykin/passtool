@@ -14,32 +14,23 @@ import (
 	"strconv"
 )
 
-// fetchOrCreateService fetches existing or creates new Service instance
-func fetchOrCreateService(service *models.Service, serviceName string) {
-	err := service.FetchByName(db, serviceName, false)
-
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		service.Name = serviceName
-		err = db.Create(&service).Error
-	}
-
-	checkSimpleErrorWithDetails(err, "unable to create service", printer)
-}
-
 // fetchServiceWithAccounts tries to fetch service
-func fetchServiceWithAccounts(service *models.Service, serviceName string) bool {
+func fetchServiceWithAccounts(service *models.Service, serviceName string) (bool, error) {
 	err := service.FetchByName(db, serviceName, true)
 
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return false
+		return false, nil
 	}
 
-	checkSimpleErrorWithDetails(err, "unable to get service", printer)
-	return true
+	if err != nil {
+		return false, fmt.Errorf("unable to fetch service: %w", err)
+	}
+
+	return true, nil
 }
 
 // printServices prints list of added services and also their accounts if withAccounts=true
-func printServices(services []models.Service, withAccounts bool, p Print) {
+func printServices(services []models.Service, withAccounts bool, p Printer) {
 	if len(services) == 0 {
 		p.Infoln("There are no added services yet")
 		return
@@ -56,38 +47,35 @@ func printServices(services []models.Service, withAccounts bool, p Print) {
 	}
 }
 
-// getAccountsCount returns number of accounts with a given login for a given service
-func getAccountsCount(account *models.Account, login string, serviceID uint) int64 {
-	var count int64
-	result := db.Model(&account).Where("login = ? AND service_id = ?", login, serviceID).Count(&count)
-	checkSimpleErrorWithDetails(result.Error, "unable to check account existence", printer)
-	return count
-}
-
-// requestUniqueLogin request login from user. If login already exists for the given service - retries.
-func requestUniqueLogin(account *models.Account, serviceID uint, serviceName string) string {
+// requestUniqueLoginForService request login from user. If login already exists for the given service - retries.
+func requestUniqueLoginForService(account *models.Account, service models.Service, printer Printer) (string, error) {
 	for {
 		login := cli.GetUserInput("Enter login: ", printer)
-		count := getAccountsCount(account, login, serviceID)
+
+		var count int64
+		err := account.FindByLoginAndServiceID(db, login, service.ID).Count(&count).Error
+		if err != nil {
+			return "", fmt.Errorf("faild to request unique login: %w", err)
+		}
 
 		if count > 0 {
 			log.Printf(
 				"Account with login %q at %q already exists, to update it use %q command. Use another login.",
 				login,
-				serviceName,
+				service.Name,
 				updateCmd.Use,
 			)
 		} else {
-			return login
+			return login, nil
 		}
 	}
 }
 
 // requestExistingAccount request login from user. If login doesn't exist for the given service - retries.
 // If succeeds - loads account by login
-func requestExistingAccount(service *models.Service) *models.Account {
+func requestExistingAccount(service *models.Service, p Printer) *models.Account {
 	for {
-		identifier := cli.GetUserInput("Enter login or serial number: ", printer)
+		identifier := cli.GetUserInput("Enter login or serial number: ", p)
 		var login string
 
 		num, err := strconv.Atoi(identifier)
@@ -108,7 +96,7 @@ func requestExistingAccount(service *models.Service) *models.Account {
 			}
 		}
 
-		printer.Warning(
+		p.Warning(
 			"Account with login %q doesn't exist at service %q. Use another login or correct serial number.",
 			login,
 			service.Name,
@@ -117,7 +105,7 @@ func requestExistingAccount(service *models.Service) *models.Account {
 }
 
 // getSecret returns secret given by user (handle possible errors)
-func getSecret(secretName string, confirm bool) string {
+func getSecret(secretName string, confirm bool, printer Printer) string {
 	postfix := ""
 	if confirm {
 		postfix = " again"
@@ -129,10 +117,10 @@ func getSecret(secretName string, confirm bool) string {
 }
 
 // getSecretWithConfirmation handles getting pass phrase with confirmation
-func getSecretWithConfirmation(secretName string, retryMsg string) string {
+func getSecretWithConfirmation(secretName string, retryMsg string, printer Printer) string {
 	for {
-		pass1 := getSecret(secretName, false)
-		pass2 := getSecret(secretName, true)
+		pass1 := getSecret(secretName, false, printer)
+		pass2 := getSecret(secretName, true, printer)
 
 		if pass1 != pass2 {
 			fmt.Println(retryMsg)
@@ -142,61 +130,49 @@ func getSecretWithConfirmation(secretName string, retryMsg string) string {
 	}
 }
 
-// saveAccountWithPassword performs transactional save of password and account to database
-func saveAccountWithPassword(account *models.Account, password *models.Password) {
-	err := db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&password).Error; err != nil {
-			return err
-		}
-
-		account.PasswordID = password.ID
-
-		if err := tx.Create(&account).Error; err != nil {
-			return err
-		}
-
-		return nil
-	})
-	checkSimpleErrorWithDetails(err, "unable to create password", printer)
-}
-
 // checkSimpleErrorWithDetails handles general error, and prints message with error details to the console
-func checkSimpleErrorWithDetails(err error, msg string, p Print) {
+func checkSimpleErrorWithDetails(err error, msg string, p Printer) {
 	if err != nil {
 		p.ErrorWithExit("%s: %v", msg, err)
 	}
 }
 
 // checkSimpleError handles general error and prints message to the console.
-func checkSimpleError(err error, msg string, p Print) {
+func checkSimpleError(err error, msg string, p Printer) {
 	if err != nil {
 		p.ErrorWithExit(msg)
 	}
 }
 
 // encryptPassword sets encrypted password and salt for given Password instance
-func encryptPassword(password *models.Password, userPassword, secret string) {
+func encryptPassword(password *models.Password, userPassword, secret string) error {
 	salt, err := passGenerator.Generate(
 		cfg.SaltSettings.Length,
 		cfg.SaltSettings.NumDigits,
 		cfg.SaltSettings.NumSymbols,
 		cfg.SaltSettings.NoUpper,
 		cfg.SaltSettings.AllowRepeat)
-	checkSimpleErrorWithDetails(err, "unable to get salt", printer)
+
+	if err != nil {
+		return fmt.Errorf("unable to get salt: %w", err)
+	}
 
 	keyLen := cfg.SecretKeyLength
 	key := crypto.DeriveKey(secret, salt, keyLen)
 
 	encryptedPassword, err := crypto.Encrypt(key, userPassword)
-	checkSimpleErrorWithDetails(err, "unable to encrypt the password", printer)
+	if err != nil {
+		return fmt.Errorf("unable to encrypt the password: %w", err)
+	}
 
 	password.Encrypted = encryptedPassword
 	password.Salt = salt
+	return nil
 }
 
 // printServiceAccounts prints accounts of the given service into console
-func printServiceAccounts(service models.Service) {
-	printer.Header("Service %q has accounts with the following logins:", service.Name)
+func printServiceAccounts(service models.Service, p Printer) {
+	p.Header("Service %q has accounts with the following logins:", service.Name)
 	accMap := service.GetAccountsMap()
 	keys := make([]int, 0, len(accMap))
 
@@ -214,30 +190,34 @@ func printServiceAccounts(service models.Service) {
 
 // requestExistingService queries for an existing service name until it gets one.
 // If succeeds - loads service with its accounts
-func requestExistingService(service *models.Service) {
+func requestExistingService(service *models.Service, p Printer) error {
 	for {
-		serviceName := cli.GetUserInput("Enter service name: ", printer)
+		serviceName := cli.GetUserInput("Enter service name: ", p)
 
-		ok := fetchServiceWithAccounts(service, serviceName)
+		ok, err := fetchServiceWithAccounts(service, serviceName)
+		if err != nil {
+			return fmt.Errorf("failed to request existing service: %w", err)
+		}
+
 		if !ok {
-			printer.Warning("Service with name %q not found, try again", serviceName)
+			p.Warning("Service with name %q not found, try again", serviceName)
 		} else {
-			return
+			return nil
 		}
 	}
 }
 
 // PrintServiceRequirements prints the information for service to be able to work
-func PrintServiceRequirements(cfg *config.Config, printer Print) {
+func PrintServiceRequirements(cfg *config.Config, p Printer) {
 	fmt.Println()
-	printer.Info("For the app to work you need to add the following environment variables:")
+	p.Info("For the app to work you need to add the following environment variables:")
 	for _, ev := range cfg.GetRequiredEnvVars() {
 		fmt.Println(fmt.Sprintf("  %q - %s", ev.Name, ev.Description))
 	}
 
 	fmt.Println()
 
-	printer.Info("You might also want to add the following optional environment variables:")
+	p.Info("You might also want to add the following optional environment variables:")
 	for _, ev := range cfg.GetOptionalEnvVars() {
 		fmt.Println(fmt.Sprintf("  %q - %s", ev.Name, ev.Description))
 	}

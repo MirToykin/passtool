@@ -20,7 +20,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-type Print interface {
+type Printer interface {
 	Simple(msg string, a ...interface{})
 	Simpleln(msg string, a ...interface{})
 	Info(msg string, a ...interface{})
@@ -32,16 +32,16 @@ type Print interface {
 	ErrorWithExit(msg string, a ...interface{})
 }
 
-var printer Print
+var cmdPrinter Printer
 var db *gorm.DB
 var cfg *config.Config
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute(database *gorm.DB, c *config.Config, prt Print) {
+func Execute(database *gorm.DB, c *config.Config, printer Printer) {
 	db = database
 	cfg = c
-	printer = prt
+	cmdPrinter = printer
 
 	sqlDb, err := db.DB()
 	if err != nil {

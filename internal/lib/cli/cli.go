@@ -35,7 +35,7 @@ func GetSensitiveUserInput(prompt string, prt Print) (string, error) {
 		prt.Info(prompt)
 		bytePassword, err := term.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil {
-			return "", err
+			return "", fmt.Errorf("unable to get sensitive input: %w", err)
 		}
 
 		fmt.Println() // Print a newline because ReadPassword does not capture the enter key

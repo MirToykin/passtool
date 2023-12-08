@@ -12,24 +12,30 @@ var addCmd = &cobra.Command{
 	Short: "Add your custom password",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
+		errPrefix := "failed to add"
 		var service models.Service
-		serviceName := cli.GetUserInput("Enter service name: ", printer)
-		fetchOrCreateService(&service, serviceName)
+		serviceName := cli.GetUserInput("Enter service name: ", cmdPrinter)
+		err := service.FetchOrCreate(db, serviceName)
+		checkSimpleErrorWithDetails(err, errPrefix, cmdPrinter)
 
 		var account models.Account
-		login := requestUniqueLogin(&account, service.ID, serviceName)
+		login, err := requestUniqueLoginForService(&account, service, cmdPrinter)
+		checkSimpleErrorWithDetails(err, errPrefix, cmdPrinter)
 
 		account.Service = service
 		account.Login = login
 
 		var password models.Password
-		userPassword := getSecretWithConfirmation("password", "Passwords are not equal")
-		secretKey := getSecretWithConfirmation("secret key", "Secret keys are not equal")
+		userPassword := getSecretWithConfirmation("password", "Passwords are not equal", cmdPrinter)
+		secretKey := getSecretWithConfirmation("secret key", "Secret keys are not equal", cmdPrinter)
 
-		encryptPassword(&password, userPassword, secretKey)
-		saveAccountWithPassword(&account, &password)
+		err = encryptPassword(&password, userPassword, secretKey)
+		checkSimpleErrorWithDetails(err, errPrefix, cmdPrinter)
 
-		printer.Success("Successfully added password for account with login %q at %q", login, serviceName)
+		err = account.SaveWithPassword(db, &password)
+		checkSimpleErrorWithDetails(err, errPrefix, cmdPrinter)
+
+		cmdPrinter.Success("Successfully added password for account with login %q at %q", login, serviceName)
 	},
 }
 
