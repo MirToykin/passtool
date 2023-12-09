@@ -69,5 +69,9 @@ func (a *Account) SaveWithPassword(db *gorm.DB, password *Password) error {
 		return nil
 	})
 
-	return fmt.Errorf("unable to save account with password: %w", err)
+	if err != nil {
+		return fmt.Errorf("unable to save account with password: %w", err)
+	}
+
+	return nil
 }

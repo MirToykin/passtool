@@ -1,16 +1,21 @@
 package config
 
 import (
-	"os"
+	"fmt"
+	"path/filepath"
+	"time"
 )
 
 type Config struct {
-	StoragePath      string
-	BackupIndex      uint64
-	SecretKeyLength  int
-	PasswordSettings GeneratorSettings
-	SaltSettings     GeneratorSettings
-	EnvVariables     []EnvVar
+	BasePath               string
+	StoragePath            string
+	BackupFilenameTemplate string
+	BackupIndex            uint
+	BackupCountToStore     uint
+	SecretKeyLength        int
+	PasswordSettings       GeneratorSettings
+	SaltSettings           GeneratorSettings
+	EnvVariables           []EnvVar
 }
 
 // IsValid checks if config valid
@@ -45,6 +50,15 @@ func (c Config) GetOptionalEnvVars() []EnvVar {
 	return c.filterVars(false)
 }
 
+func (c Config) GetBackupFilePath() string {
+	fileName := fmt.Sprintf(c.BackupFilenameTemplate, time.Now().Unix())
+	return filepath.Join(c.BasePath, fileName)
+}
+
+func (c Config) GetBackupFilePathMask() string {
+	return filepath.Join(c.BasePath, fmt.Sprintf(c.BackupFilenameTemplate, "*"))
+}
+
 type GeneratorSettings struct {
 	Length      int
 	NumDigits   int
@@ -55,18 +69,15 @@ type GeneratorSettings struct {
 
 // Load creates and returns pointer to Config
 func Load() *Config {
-	storageVar.Value = os.Getenv(storageEnv)
-	backupIndexVar.Value = os.Getenv(backupIndexEnv)
-	backupIndex := backupIndexVar.IntVal()
-
-	if backupIndex == 0 {
-		backupIndex = defaultBackupIndex
-	}
-
-	var cfg = Config{
-		StoragePath:     ensureTrailingSlash(storageVar.Value) + storageFileName,
-		BackupIndex:     backupIndex,
-		SecretKeyLength: 32,
+	environment.loadVars()
+	storageDir := environment.getStorage()
+	return &Config{
+		BasePath:               storageDir,
+		StoragePath:            filepath.Join(storageDir, storageFileName),
+		BackupFilenameTemplate: storageBackupFileNameTemplate,
+		BackupIndex:            environment.getBackupIndex(),
+		BackupCountToStore:     environment.getBackupCount(),
+		SecretKeyLength:        32,
 		PasswordSettings: GeneratorSettings{
 			Length:      12,
 			NumDigits:   3,
@@ -81,8 +92,6 @@ func Load() *Config {
 			NoUpper:     false,
 			AllowRepeat: false,
 		},
-		EnvVariables: []EnvVar{storageVar, backupIndexVar},
+		EnvVariables: environment.getVars(),
 	}
-
-	return &cfg
 }

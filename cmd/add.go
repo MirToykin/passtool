@@ -4,6 +4,7 @@ import (
 	"github.com/MirToykin/passtool/internal/lib/cli"
 	"github.com/MirToykin/passtool/internal/storage/models"
 	"github.com/spf13/cobra"
+	"sync"
 )
 
 // addCmd represents the add command
@@ -35,7 +36,25 @@ var addCmd = &cobra.Command{
 		err = account.SaveWithPassword(db, &password)
 		checkSimpleErrorWithDetails(err, errPrefix, cmdPrinter)
 
+		wg := sync.WaitGroup{}
+		errChan := make(chan error, 2)
+
+		if checkIfBackupNeeded(password.ID, cfg.BackupIndex) {
+			wg.Add(2)
+			go createBackup(&wg, cfg, errChan, cmdPrinter)
+			go clearUnnecessaryBackups(&wg, errChan, cfg, cmdPrinter)
+		}
+
 		cmdPrinter.Success("Successfully added password for account with login %q at %q", login, serviceName)
+
+		wg.Wait()
+		close(errChan)
+
+		for err := range errChan {
+			if err != nil {
+				cmdPrinter.Warning("failed to handle backup: %v", err)
+			}
+		}
 	},
 }
 

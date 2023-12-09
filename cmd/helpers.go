@@ -9,9 +9,13 @@ import (
 	"github.com/MirToykin/passtool/internal/storage/models"
 	passGenerator "github.com/sethvargo/go-password/password"
 	"gorm.io/gorm"
+	"io"
 	"log"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
+	"sync"
 )
 
 // fetchServiceWithAccounts tries to fetch service
@@ -210,16 +214,116 @@ func requestExistingService(service *models.Service, p Printer) error {
 // PrintServiceRequirements prints the information for service to be able to work
 func PrintServiceRequirements(cfg *config.Config, p Printer) {
 	fmt.Println()
-	p.Info("For the app to work you need to add the following environment variables:")
+	p.Infoln("For the app to work you need to add the following environment variables:")
 	for _, ev := range cfg.GetRequiredEnvVars() {
 		fmt.Println(fmt.Sprintf("  %q - %s", ev.Name, ev.Description))
 	}
 
 	fmt.Println()
 
-	p.Info("You might also want to add the following optional environment variables:")
+	p.Infoln("You might also want to add the following optional environment variables:")
 	for _, ev := range cfg.GetOptionalEnvVars() {
 		fmt.Println(fmt.Sprintf("  %q - %s", ev.Name, ev.Description))
 	}
 	fmt.Println()
+}
+
+// copyFile copies file from source to destination
+func copyFile(source, destination string) error {
+	sourceFile, err := os.Open(source)
+	if err != nil {
+		return fmt.Errorf("unable to open source file: %w", err)
+	}
+	defer sourceFile.Close()
+
+	destinationFile, err := os.Create(destination)
+	if err != nil {
+		return fmt.Errorf("unable to create destination file: %w", err)
+	}
+	defer destinationFile.Close()
+
+	_, err = io.Copy(destinationFile, sourceFile)
+	if err != nil {
+		return fmt.Errorf("unable to copy file: %w", err)
+	}
+
+	return nil
+}
+
+// checkIfBackupNeeded returns true if backup needed otherwise false
+func checkIfBackupNeeded(passwordID, backupIndex uint) bool {
+	return passwordID%backupIndex == 0
+}
+
+// createBackup creates storage backup
+func createBackup(
+	wg *sync.WaitGroup,
+	cfg *config.Config,
+	errChan chan<- error,
+	printer Printer) {
+	defer wg.Done()
+	printer.Simpleln("Creating backup...")
+
+	err := copyFile(cfg.StoragePath, cfg.GetBackupFilePath())
+	if err != nil {
+		errChan <- fmt.Errorf("unable to create backup: %w", err)
+		return
+	}
+
+	errChan <- nil
+}
+
+// clearUnnecessaryBackups clears outdated backups
+func clearUnnecessaryBackups(
+	wg *sync.WaitGroup,
+	errChan chan<- error,
+	conf *config.Config,
+	printer Printer,
+) {
+	defer wg.Done()
+	errTemplate := "unable to clear backup: %w"
+	files, err := filepath.Glob(conf.GetBackupFilePathMask())
+	if err != nil {
+		errChan <- fmt.Errorf(errTemplate, err)
+		return
+	}
+
+	if len(files) <= int(conf.BackupCountToStore) {
+		errChan <- nil
+		return
+	}
+
+	printer.Simpleln("clearing unnecessary backups...")
+
+	type fileInfo struct {
+		path    string
+		created int64
+	}
+	var fileInfoData []fileInfo
+
+	for _, file := range files {
+		fInfo, err := os.Stat(file)
+		if err != nil {
+			errChan <- fmt.Errorf(errTemplate, err)
+			return
+		}
+
+		fileInfoData = append(fileInfoData, fileInfo{
+			path:    file,
+			created: fInfo.ModTime().Unix(),
+		})
+	}
+
+	sort.Slice(fileInfoData, func(i, j int) bool {
+		return fileInfoData[i].created > fileInfoData[j].created
+	})
+
+	for _, file := range fileInfoData[conf.BackupCountToStore:] {
+		err = os.Remove(file.path)
+		if err != nil {
+			printer.Warning("unable to remove unnecessary backup file: %s", file.path)
+		}
+	}
+
+	errChan <- nil
 }
