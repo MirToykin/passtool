@@ -1,60 +1,23 @@
 package cmd
 
 import (
-	"github.com/MirToykin/passtool/internal/lib/cli"
-	"github.com/MirToykin/passtool/internal/storage/models"
 	"github.com/spf13/cobra"
-	"sync"
 )
 
 // addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add",
-	Short: "Add your custom password",
+	Short: "Add your custom password for a service",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		errPrefix := "failed to add"
-		var service models.Service
-		serviceName := cli.GetUserInput("Enter service name: ", cmdPrinter)
-		err := service.FetchOrCreate(db, serviceName)
-		checkSimpleErrorWithDetails(err, errPrefix, cmdPrinter)
-
-		var account models.Account
-		login, err := requestUniqueLoginForService(&account, service, cmdPrinter)
-		checkSimpleErrorWithDetails(err, errPrefix, cmdPrinter)
-
-		account.Service = service
-		account.Login = login
-
-		var password models.Password
-		userPassword := getSecretWithConfirmation("password", "Passwords are not equal", cmdPrinter)
-		secretKey := getSecretWithConfirmation("secret key", "Secret keys are not equal", cmdPrinter)
-
-		err = encryptPassword(&password, userPassword, secretKey)
-		checkSimpleErrorWithDetails(err, errPrefix, cmdPrinter)
-
-		err = account.SaveWithPassword(db, &password)
-		checkSimpleErrorWithDetails(err, errPrefix, cmdPrinter)
-
-		wg := sync.WaitGroup{}
-		errChan := make(chan error, 2)
-
-		if checkIfBackupNeeded(password.ID, cfg.BackupIndex) {
-			wg.Add(2)
-			go createBackup(&wg, cfg, errChan, cmdPrinter)
-			go clearUnnecessaryBackups(&wg, errChan, cfg, cmdPrinter)
-		}
-
-		cmdPrinter.Success("Successfully added password for account with login %q at %q", login, serviceName)
-
-		wg.Wait()
-		close(errChan)
-
-		for err := range errChan {
-			if err != nil {
-				cmdPrinter.Warning("failed to handle backup: %v", err)
-			}
-		}
+		genericAdd(
+			"add password",
+			db,
+			cmdPrinter,
+			cfg,
+			func() string {
+				return getSecretWithConfirmation("password", "Passwords are not equal", cmdPrinter)
+			})
 	},
 }
 

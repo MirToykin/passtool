@@ -327,3 +327,53 @@ func clearUnnecessaryBackups(
 
 	errChan <- nil
 }
+
+func genericAdd(
+	operation string,
+	DB *gorm.DB,
+	printer Printer,
+	conf *config.Config,
+	getPassword func() string,
+) {
+	var service models.Service
+	serviceName := cli.GetUserInput("Enter service name: ", printer)
+	err := service.FetchOrCreate(DB, serviceName)
+	checkSimpleErrorWithDetails(err, operation, printer)
+
+	var account models.Account
+	login, err := requestUniqueLoginForService(&account, service, printer)
+	checkSimpleErrorWithDetails(err, operation, printer)
+
+	account.Service = service
+	account.Login = login
+
+	var password models.Password
+	userPassword := getPassword()
+	secretKey := getSecretWithConfirmation("secret key", "Secret keys are not equal", printer)
+
+	err = encryptPassword(&password, userPassword, secretKey)
+	checkSimpleErrorWithDetails(err, operation, printer)
+
+	err = account.SaveWithPassword(DB, &password)
+	checkSimpleErrorWithDetails(err, operation, printer)
+
+	wg := sync.WaitGroup{}
+	errChan := make(chan error, 2)
+
+	if checkIfBackupNeeded(password.ID, conf.BackupIndex) {
+		wg.Add(2)
+		go createBackup(&wg, conf, errChan, printer)
+		go clearUnnecessaryBackups(&wg, errChan, conf, printer)
+	}
+
+	printer.Success("Successfully added password for account with login %q at %q", login, serviceName)
+
+	wg.Wait()
+	close(errChan)
+
+	for err = range errChan {
+		if err != nil {
+			printer.Warning("failed to handle backup: %v", err)
+		}
+	}
+}
