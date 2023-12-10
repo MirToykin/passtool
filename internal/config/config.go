@@ -7,15 +7,16 @@ import (
 )
 
 type Config struct {
-	BasePath               string
-	StoragePath            string
-	BackupFilenameTemplate string
-	BackupIndex            uint
-	BackupCountToStore     uint
-	SecretKeyLength        int
-	PasswordSettings       GeneratorSettings
-	SaltSettings           GeneratorSettings
-	EnvVariables           []EnvVar
+	BasePath                   string
+	StoragePath                string
+	BackupFilenameTemplate     string
+	BackupIndex                uint
+	BackupCountToStore         uint
+	SecretKeyLength            int
+	MinGeneratedPasswordLength int
+	PasswordSettings           GeneratorSettings
+	SaltSettings               GeneratorSettings
+	EnvVariables               []EnvVar
 }
 
 // IsValid checks if config valid
@@ -72,12 +73,13 @@ func Load() *Config {
 	environment.loadVars()
 	storageDir := environment.getStorage()
 	return &Config{
-		BasePath:               storageDir,
-		StoragePath:            filepath.Join(storageDir, storageFileName),
-		BackupFilenameTemplate: storageBackupFileNameTemplate,
-		BackupIndex:            environment.getBackupIndex(),
-		BackupCountToStore:     environment.getBackupCount(),
-		SecretKeyLength:        32,
+		BasePath:                   storageDir,
+		StoragePath:                filepath.Join(storageDir, storageFileName),
+		BackupFilenameTemplate:     storageBackupFileNameTemplate,
+		BackupIndex:                environment.getBackupIndex(),
+		BackupCountToStore:         environment.getBackupCount(),
+		SecretKeyLength:            32,
+		MinGeneratedPasswordLength: 6,
 		PasswordSettings: GeneratorSettings{
 			Length:      12,
 			NumDigits:   3,
