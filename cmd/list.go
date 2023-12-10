@@ -1,6 +1,3 @@
-/*
-Copyright © 2023 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -19,7 +16,7 @@ var listCmd = &cobra.Command{
 		checkSimpleErrorWithDetails(err, errPrefix, cmdPrinter)
 
 		service := models.Service{}
-		services, err := service.GetList(db, withAccounts)
+		services, err := service.GetList(database, withAccounts)
 		checkSimpleErrorWithDetails(err, errPrefix, cmdPrinter)
 
 		printServices(services, withAccounts, cmdPrinter)
@@ -30,4 +27,22 @@ func init() {
 	rootCmd.AddCommand(listCmd)
 
 	listCmd.Flags().BoolP("accounts", "a", false, "Printer accounts as well")
+}
+
+// printServices prints list of added services and also their accounts if withAccounts=true
+func printServices(services []models.Service, withAccounts bool, p Printer) {
+	if len(services) == 0 {
+		p.Infoln("There are no added services yet")
+		return
+	}
+	p.Header("The following services were added:")
+	for i, service := range services {
+		p.Infoln("%d. %s", i+1, service.Name)
+
+		if withAccounts {
+			for _, account := range service.Accounts {
+				p.Simpleln("  - %s", account.Login)
+			}
+		}
+	}
 }

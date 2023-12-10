@@ -33,17 +33,17 @@ type Printer interface {
 }
 
 var cmdPrinter Printer
-var db *gorm.DB
-var cfg *config.Config
+var database *gorm.DB
+var appConfig *config.Config
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute(database *gorm.DB, c *config.Config, printer Printer) {
-	db = database
-	cfg = c
+func Execute(dbase *gorm.DB, c *config.Config, printer Printer) {
+	database = dbase
+	appConfig = c
 	cmdPrinter = printer
 
-	sqlDb, err := db.DB()
+	sqlDb, err := database.DB()
 	if err != nil {
 		log.Fatalf("cant get SQL DB: %v", err)
 	}

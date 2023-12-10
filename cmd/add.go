@@ -12,9 +12,9 @@ var addCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		genericAdd(
 			"add password",
-			db,
+			database,
 			cmdPrinter,
-			cfg,
+			appConfig,
 			func() string {
 				return getSecretWithConfirmation("password", "Passwords are not equal", cmdPrinter)
 			})

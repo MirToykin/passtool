@@ -13,31 +13,31 @@ var genCmd = &cobra.Command{
 	Short: "Generate new password for a service",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		length := cfg.PasswordSettings.Length
+		length := appConfig.PasswordSettings.Length
 		if len(args) > 0 {
 			l, err := strconv.Atoi(args[0])
 			if err != nil {
 				cmdPrinter.ErrorWithExit("Invalid argument provided for password length")
 			}
 
-			if l < cfg.MinGeneratedPasswordLength {
-				cmdPrinter.Infoln("Password length should be at least %d symbols", cfg.MinGeneratedPasswordLength)
+			if l < appConfig.MinGeneratedPasswordLength {
+				cmdPrinter.Infoln("Password length should be at least %d symbols", appConfig.MinGeneratedPasswordLength)
 				os.Exit(0)
 			}
 
 			length = l
 		}
 		genericAdd("generate password",
-			db,
+			database,
 			cmdPrinter,
-			cfg,
+			appConfig,
 			func() string {
 				password, err := passGenerator.Generate(
 					length,
-					cfg.PasswordSettings.NumDigits,
-					cfg.PasswordSettings.NumSymbols,
-					cfg.PasswordSettings.NoUpper,
-					cfg.PasswordSettings.AllowRepeat)
+					appConfig.PasswordSettings.NumDigits,
+					appConfig.PasswordSettings.NumSymbols,
+					appConfig.PasswordSettings.NoUpper,
+					appConfig.PasswordSettings.AllowRepeat)
 
 				if err != nil {
 					checkSimpleErrorWithDetails(err, "failed to generate password", cmdPrinter)

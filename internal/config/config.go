@@ -68,6 +68,22 @@ type GeneratorSettings struct {
 	AllowRepeat bool
 }
 
+func (gs GeneratorSettings) GetLength() int {
+	return gs.Length
+}
+func (gs GeneratorSettings) GetNumDigits() int {
+	return gs.NumDigits
+}
+func (gs GeneratorSettings) GetNumSymbols() int {
+	return gs.NumSymbols
+}
+func (gs GeneratorSettings) GetNoUpper() bool {
+	return gs.NoUpper
+}
+func (gs GeneratorSettings) GetAllowRepeat() bool {
+	return gs.AllowRepeat
+}
+
 // Load creates and returns pointer to Config
 func Load() *Config {
 	environment.loadVars()
