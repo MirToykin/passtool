@@ -4,8 +4,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ServiceCmd represents the service command
-var ServiceCmd = &cobra.Command{
+// AppServiceCmd represents the service command
+var AppServiceCmd = &cobra.Command{
 	Use:   "service",
 	Short: "Service requirements",
 	Long:  `Prints service usage requirements`,
