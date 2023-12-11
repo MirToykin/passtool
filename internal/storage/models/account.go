@@ -1,9 +1,7 @@
 package models
 
 import (
-	"errors"
 	"fmt"
-	"github.com/MirToykin/passtool/internal/crypto"
 	"gorm.io/gorm"
 )
 
@@ -31,16 +29,6 @@ func (a *Account) LoadPassword(db *gorm.DB) error {
 		return fmt.Errorf("unable to load password: %w", err)
 	}
 	return nil
-}
-
-// GetDecodedPassword returns decoded account password
-func (a *Account) GetDecodedPassword(secret string, keyLen int) (string, error) {
-	if a.Password.Encrypted == "" {
-		return "", errors.New("account password is not loaded")
-	}
-
-	key := crypto.DeriveKey(secret, a.Password.Salt, keyLen)
-	return crypto.Decrypt(key, a.Password.Encrypted)
 }
 
 // List prepare query of all the accounts and return it
