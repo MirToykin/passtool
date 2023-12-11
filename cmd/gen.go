@@ -20,8 +20,8 @@ var genCmd = &cobra.Command{
 				cmdPrinter.ErrorWithExit("Invalid argument provided for password length")
 			}
 
-			if l < appConfig.MinGeneratedPasswordLength {
-				cmdPrinter.Infoln("Password length should be at least %d symbols", appConfig.MinGeneratedPasswordLength)
+			if l < appConfig.MinPasswordLength || l > appConfig.MaxPasswordLength {
+				cmdPrinter.Infoln("The password must be at least %d and no more than %d characters long.", appConfig.MinPasswordLength, appConfig.MaxPasswordLength)
 				os.Exit(0)
 			}
 

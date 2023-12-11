@@ -20,6 +20,14 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+type GenSettings interface {
+	GetLength() int
+	GetNumDigits() int
+	GetNumSymbols() int
+	GetNoUpper() bool
+	GetAllowRepeat() bool
+}
+
 type Printer interface {
 	Simple(msg string, a ...interface{})
 	Simpleln(msg string, a ...interface{})

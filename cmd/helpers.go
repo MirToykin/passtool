@@ -36,10 +36,10 @@ func requestUniqueLoginForService(
 
 		if count > 0 {
 			log.Printf(
-				"Account with login %q at %q already exists, to update it use %q command. Use another login.",
+				"Account with login %q at %q already exists, to update it use the %q command. Use another login.",
 				login,
 				service.Name,
-				updateCmd.Use,
+				setCmd.Use,
 			)
 		} else {
 			return login, nil
@@ -85,14 +85,6 @@ func checkSimpleError(err error, msg string, p Printer) {
 	if err != nil {
 		p.ErrorWithExit(msg)
 	}
-}
-
-type GenSettings interface {
-	GetLength() int
-	GetNumDigits() int
-	GetNumSymbols() int
-	GetNoUpper() bool
-	GetAllowRepeat() bool
 }
 
 // encryptPassword sets encrypted password and salt for given Password instance

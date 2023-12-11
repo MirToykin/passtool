@@ -11,13 +11,13 @@ var listCmd = &cobra.Command{
 	Short: "Prints a list of available services with their accounts",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		errPrefix := "failed to list"
+		operation := "get list"
 		withAccounts, err := cmd.Flags().GetBool("accounts")
-		checkSimpleErrorWithDetails(err, errPrefix, cmdPrinter)
+		checkSimpleErrorWithDetails(err, operation, cmdPrinter)
 
 		service := models.Service{}
 		services, err := service.GetList(database, withAccounts)
-		checkSimpleErrorWithDetails(err, errPrefix, cmdPrinter)
+		checkSimpleErrorWithDetails(err, operation, cmdPrinter)
 
 		printServices(services, withAccounts, cmdPrinter)
 	},
