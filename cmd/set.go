@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/MirToykin/passtool/internal/config"
 	"github.com/MirToykin/passtool/internal/lib/cli"
 	"github.com/MirToykin/passtool/internal/storage/models"
@@ -10,68 +9,59 @@ import (
 	"os"
 )
 
-const (
-	generateFlag  = "generate"
-	lengthFlag    = "length"
-	lengthDefault = 12
-)
+// getSetCmd returns the representation of the set command
+func getSetCmd(deps AppDependencies) *cobra.Command {
+	return &cobra.Command{
+		Use:   "set",
+		Short: "Set new password for an existing account",
+		Long:  ``,
+		Run: func(cmd *cobra.Command, args []string) {
+			operation := "set password"
+			needGenerate, err := cmd.Flags().GetBool(generateFlag)
+			checkSimpleErrorWithDetails(err, operation, deps.printer)
 
-// setCmd represents the set command
-var setCmd = &cobra.Command{
-	Use:   "set",
-	Short: "Set new password for an existing account",
-	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		operation := "set password"
-		needGenerate, err := cmd.Flags().GetBool(generateFlag)
-		checkSimpleErrorWithDetails(err, operation, cmdPrinter)
+			var userPassword string
+			if needGenerate {
+				length, err := cmd.Flags().GetInt(lengthFlag)
+				checkSimpleErrorWithDetails(err, operation, deps.printer)
 
-		var userPassword string
-		if needGenerate {
-			length, err := cmd.Flags().GetInt(lengthFlag)
-			checkSimpleErrorWithDetails(err, operation, cmdPrinter)
+				userPassword, err = getGeneratedPassword(length, deps.config, deps.printer)
+				checkSimpleErrorWithDetails(err, "failed to generate password", deps.printer)
+			} else {
+				userPassword = getSecretWithConfirmation("new password", "Passwords are not equal", deps.printer)
+			}
 
-			userPassword, err = getGeneratedPassword(length, appConfig)
-			checkSimpleErrorWithDetails(err, "failed to generate password", cmdPrinter)
-		} else {
-			userPassword = getSecretWithConfirmation("new password", "Passwords are not equal", cmdPrinter)
-		}
+			genericGet(
+				operation,
+				deps.db,
+				deps.printer,
+				func(password models.Password) {
+					secret, err := cli.GetSensitiveUserInput("Enter secret: ", deps.printer)
+					checkSimpleErrorWithDetails(err, operation, deps.printer)
 
-		genericGet(
-			operation,
-			database,
-			cmdPrinter,
-			func(password models.Password) {
-				secret, err := cli.GetSensitiveUserInput("Enter secret: ", cmdPrinter)
-				checkSimpleErrorWithDetails(err, operation, cmdPrinter)
+					_, err = password.GetDecrypted(secret, deps.config.SecretKeyLength)
+					checkSimpleError(err, "Provided incorrect secret", deps.printer)
 
-				_, err = password.GetDecrypted(secret, appConfig.SecretKeyLength)
-				checkSimpleError(err, "Provided incorrect secret", cmdPrinter)
+					secretKey := getSecretWithConfirmation("secret key for new password", "Secret keys are not equal", deps.printer)
 
-				secretKey := getSecretWithConfirmation("secret key for new password", "Secret keys are not equal", cmdPrinter)
+					err = encryptPassword(&password, userPassword, secretKey, deps.config.SecretKeyLength, deps.config.PasswordSettings)
+					checkSimpleErrorWithDetails(err, operation, deps.printer)
 
-				err = encryptPassword(&password, userPassword, secretKey, appConfig.SecretKeyLength, appConfig.PasswordSettings)
-				checkSimpleErrorWithDetails(err, operation, cmdPrinter)
+					err = password.Save(deps.db)
+					checkSimpleErrorWithDetails(err, operation, deps.printer)
 
-				err = password.Save(database)
-				checkSimpleErrorWithDetails(err, operation, cmdPrinter)
-
-				cmdPrinter.Success("Password updated")
-			},
-		)
-	},
+					deps.printer.Success("Password updated")
+				},
+			)
+		},
+	}
 }
 
-func init() {
-	rootCmd.AddCommand(setCmd)
+func init() {}
 
-	setCmd.Flags().BoolP(generateFlag, "g", false, "Generate secure password")
-	setCmd.Flags().Int(lengthFlag, lengthDefault, fmt.Sprintf("Length of generated password, by default %d", lengthDefault))
-}
-
-func getGeneratedPassword(length int, config *config.Config) (string, error) {
+func getGeneratedPassword(length int, config *config.Config, printer Printer) (string, error) {
 	if length < config.MinPasswordLength || length > config.MaxPasswordLength {
-		cmdPrinter.Infoln("The password must be at least %d and no more than %d characters long.", config.MinPasswordLength, config.MaxPasswordLength)
+		printer.Infoln("The password must be at least %d and no more than %d characters long.", config.MinPasswordLength, config.MaxPasswordLength)
 		os.Exit(0)
 	}
 

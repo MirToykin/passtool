@@ -6,28 +6,26 @@ import (
 )
 
 // listCmd represents the list command
-var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "Prints a list of available services with their accounts",
-	Long:  ``,
-	Run: func(cmd *cobra.Command, args []string) {
-		operation := "get list"
-		withAccounts, err := cmd.Flags().GetBool("accounts")
-		checkSimpleErrorWithDetails(err, operation, cmdPrinter)
+func getListCmd(deps AppDependencies) *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "Prints a list of available services with their accounts",
+		Long:  ``,
+		Run: func(cmd *cobra.Command, args []string) {
+			operation := "get list"
+			withAccounts, err := cmd.Flags().GetBool("accounts")
+			checkSimpleErrorWithDetails(err, operation, deps.printer)
 
-		service := models.Service{}
-		services, err := service.GetList(database, withAccounts)
-		checkSimpleErrorWithDetails(err, operation, cmdPrinter)
+			service := models.Service{}
+			services, err := service.GetList(deps.db, withAccounts)
+			checkSimpleErrorWithDetails(err, operation, deps.printer)
 
-		printServices(services, withAccounts, cmdPrinter)
-	},
+			printServices(services, withAccounts, deps.printer)
+		},
+	}
 }
 
-func init() {
-	rootCmd.AddCommand(listCmd)
-
-	listCmd.Flags().BoolP("accounts", "a", false, "Printer accounts as well")
-}
+func init() {}
 
 // printServices prints list of added services and also their accounts if withAccounts=true
 func printServices(services []models.Service, withAccounts bool, p Printer) {

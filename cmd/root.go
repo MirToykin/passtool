@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/MirToykin/passtool/cmd/service"
 	"github.com/MirToykin/passtool/internal/config"
+	out "github.com/MirToykin/passtool/internal/output"
+	"github.com/MirToykin/passtool/internal/storage"
 	"gorm.io/gorm"
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -19,6 +21,11 @@ var rootCmd = &cobra.Command{
 		_ = cmd.Help()
 	},
 }
+
+const (
+	generateFlag = "generate"
+	lengthFlag   = "length"
+)
 
 type GenSettings interface {
 	GetLength() int
@@ -40,25 +47,16 @@ type Printer interface {
 	ErrorWithExit(msg string, a ...interface{})
 }
 
-var cmdPrinter Printer
-var database *gorm.DB
-var appConfig *config.Config
+type AppDependencies struct {
+	db      *gorm.DB
+	config  *config.Config
+	printer Printer
+}
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute(dbase *gorm.DB, c *config.Config, printer Printer) {
-	database = dbase
-	appConfig = c
-	cmdPrinter = printer
-
-	sqlDb, err := database.DB()
-	if err != nil {
-		log.Fatalf("cant get SQL DB: %v", err)
-	}
-
-	defer sqlDb.Close()
-
-	err = rootCmd.Execute()
+func Execute() {
+	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
@@ -73,7 +71,46 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
+
+	printer := out.New()
+	cfg := config.Load()
+	if !cfg.IsValid() {
+		PrintServiceRequirements(cfg, printer)
+		os.Exit(0)
+	}
+
+	db, err := storage.New(cfg.StoragePath)
+	if err != nil {
+		printer.ErrorWithExit("unable to initialize DB: %v", err)
+	}
+
+	dependencies := AppDependencies{
+		db:      db,
+		config:  cfg,
+		printer: printer,
+	}
+
+	// service
 	rootCmd.AddCommand(service.AppServiceCmd)
 
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// add
+	rootCmd.AddCommand(getAddCmd(dependencies))
+
+	// get
+	rootCmd.AddCommand(getGetCmd(dependencies))
+
+	// set
+	setCmd := getSetCmd(dependencies)
+	setCmd.Flags().BoolP(generateFlag, "g", false, "Generate secure password")
+	length := dependencies.config.PasswordSettings.Length
+	setCmd.Flags().Int(lengthFlag, length, fmt.Sprintf("Length of generated password, by default %d", length))
+	rootCmd.AddCommand(setCmd)
+
+	// list
+	listCmd := getListCmd(dependencies)
+	listCmd.Flags().BoolP("accounts", "a", false, "Print accounts as well")
+	rootCmd.AddCommand(listCmd)
+
+	// gen
+	rootCmd.AddCommand(getGenCommand(dependencies))
 }
