@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/MirToykin/passtool/internal/lib/cli"
 	"github.com/MirToykin/passtool/internal/storage/models"
 	"github.com/atotto/clipboard"
 	"github.com/spf13/cobra"
@@ -20,15 +19,12 @@ func getGetCmd(deps AppDependencies) *cobra.Command {
 				deps.db,
 				deps.printer,
 				func(password models.Password) {
-					secret, err := cli.GetSensitiveUserInput("Enter secret: ", deps.printer)
+					decrypted, err := getDecryptedPasswordWithRetry(password, deps.config.SecretKeyLength, 5, deps.printer)
 					checkSimpleErrorWithDetails(err, operation, deps.printer)
 
-					decoded, err := password.GetDecrypted(secret, deps.config.SecretKeyLength)
-					checkSimpleError(err, "unable to decode password", deps.printer)
-
-					err = clipboard.WriteAll(decoded)
+					err = clipboard.WriteAll(decrypted)
 					if err != nil {
-						deps.printer.Success("Decoded password: %s", decoded)
+						deps.printer.Success("Decoded password: %s", decrypted)
 					}
 
 					deps.printer.Success("Password copied to clipboard")

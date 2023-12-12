@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"github.com/MirToykin/passtool/internal/config"
-	"github.com/MirToykin/passtool/internal/lib/cli"
 	"github.com/MirToykin/passtool/internal/storage/models"
 	passGenerator "github.com/sethvargo/go-password/password"
 	"github.com/spf13/cobra"
@@ -20,15 +19,20 @@ func getSetCmd(deps AppDependencies) *cobra.Command {
 			needGenerate, err := cmd.Flags().GetBool(generateFlag)
 			checkSimpleErrorWithDetails(err, operation, deps.printer)
 
-			var userPassword string
+			var getPassword func() string
 			if needGenerate {
 				length, err := cmd.Flags().GetInt(lengthFlag)
 				checkSimpleErrorWithDetails(err, operation, deps.printer)
 
-				userPassword, err = getGeneratedPassword(length, deps.config, deps.printer)
-				checkSimpleErrorWithDetails(err, "failed to generate password", deps.printer)
+				getPassword = func() string {
+					userPassword, err := getGeneratedPassword(length, deps.config, deps.printer)
+					checkSimpleErrorWithDetails(err, "failed to generate password", deps.printer)
+					return userPassword
+				}
 			} else {
-				userPassword = getSecretWithConfirmation("new password", "Passwords are not equal", deps.printer)
+				getPassword = func() string {
+					return getSecretWithConfirmation("new password", "Passwords are not equal", deps.printer)
+				}
 			}
 
 			genericGet(
@@ -36,15 +40,12 @@ func getSetCmd(deps AppDependencies) *cobra.Command {
 				deps.db,
 				deps.printer,
 				func(password models.Password) {
-					secret, err := cli.GetSensitiveUserInput("Enter secret: ", deps.printer)
+					_, err := getDecryptedPasswordWithRetry(password, deps.config.SecretKeyLength, 5, deps.printer)
 					checkSimpleErrorWithDetails(err, operation, deps.printer)
-
-					_, err = password.GetDecrypted(secret, deps.config.SecretKeyLength)
-					checkSimpleError(err, "Provided incorrect secret", deps.printer)
 
 					secretKey := getSecretWithConfirmation("secret key for new password", "Secret keys are not equal", deps.printer)
 
-					err = encryptPassword(&password, userPassword, secretKey, deps.config.SecretKeyLength, deps.config.PasswordSettings)
+					err = encryptPassword(&password, getPassword(), secretKey, deps.config.SecretKeyLength, deps.config.PasswordSettings)
 					checkSimpleErrorWithDetails(err, operation, deps.printer)
 
 					err = password.Save(deps.db)

@@ -393,3 +393,30 @@ func genericGet(
 
 	handler(account.Password)
 }
+
+func getDecryptedPasswordWithRetry(
+	password models.Password,
+	keyLen int,
+	maxRetries int,
+	printer Printer,
+) (string, error) {
+	tryCount := 0
+	for {
+		secret, err := cli.GetSensitiveUserInput("Enter secret: ", printer)
+		if err != nil {
+			return "", fmt.Errorf("unable to get sercret: %w", err)
+		}
+
+		decrypted, err := password.GetDecrypted(secret, keyLen)
+		if err != nil {
+			if tryCount >= maxRetries {
+				return "", fmt.Errorf("unable to check secret: %w", err)
+			}
+
+			printer.Warning("Incorrect secret, try again")
+			tryCount++
+		} else {
+			return decrypted, nil
+		}
+	}
+}
