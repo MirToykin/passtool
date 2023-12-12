@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/MirToykin/passtool/internal/config"
 	"github.com/MirToykin/passtool/internal/storage/models"
+	"github.com/atotto/clipboard"
 	passGenerator "github.com/sethvargo/go-password/password"
 	"github.com/spf13/cobra"
 	"os"
@@ -16,24 +17,10 @@ func getSetCmd(deps AppDependencies) *cobra.Command {
 		Long:  ``,
 		Run: func(cmd *cobra.Command, args []string) {
 			operation := "set password"
-			needGenerate, err := cmd.Flags().GetBool(generateFlag)
+			getPassword, err := getPasswordGetterByGenerateAndLengthFlag(
+				cmd, generateFlag, lengthFlag,
+				"new password", deps.printer, deps.config)
 			checkSimpleErrorWithDetails(err, operation, deps.printer)
-
-			var getPassword func() string
-			if needGenerate {
-				length, err := cmd.Flags().GetInt(lengthFlag)
-				checkSimpleErrorWithDetails(err, operation, deps.printer)
-
-				getPassword = func() string {
-					userPassword, err := getGeneratedPassword(length, deps.config, deps.printer)
-					checkSimpleErrorWithDetails(err, "failed to generate password", deps.printer)
-					return userPassword
-				}
-			} else {
-				getPassword = func() string {
-					return getSecretWithConfirmation("new password", "Passwords are not equal", deps.printer)
-				}
-			}
 
 			genericGet(
 				operation,
@@ -44,14 +31,20 @@ func getSetCmd(deps AppDependencies) *cobra.Command {
 					checkSimpleErrorWithDetails(err, operation, deps.printer)
 
 					secretKey := getSecretWithConfirmation("secret key for new password", "Secret keys are not equal", deps.printer)
-
-					err = encryptPassword(&password, getPassword(), secretKey, deps.config.SecretKeyLength, deps.config.PasswordSettings)
+					userPassword, err := getPassword()
+					checkSimpleErrorWithDetails(err, operation, deps.printer)
+					err = encryptPassword(&password, userPassword, secretKey, deps.config.SecretKeyLength, deps.config.PasswordSettings)
 					checkSimpleErrorWithDetails(err, operation, deps.printer)
 
 					err = password.Save(deps.db)
 					checkSimpleErrorWithDetails(err, operation, deps.printer)
 
 					deps.printer.Success("Password updated")
+
+					err = clipboard.WriteAll(userPassword)
+					if err == nil {
+						deps.printer.Simpleln("Password copied to clipboard")
+					}
 				},
 			)
 		},

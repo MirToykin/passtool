@@ -89,27 +89,31 @@ func init() {
 		printer: printer,
 	}
 
+	// ============== Register commands ==================
+
 	// requirements
 	rootCmd.AddCommand(getRequirementsCmd(dependencies.config, dependencies.printer))
 
 	// add
-	rootCmd.AddCommand(getAddCmd(dependencies))
+	addCmd := getAddCmd(dependencies)
+	setGenerationFlags(addCmd, dependencies.config.PasswordSettings.Length)
+	rootCmd.AddCommand(addCmd)
 
 	// get
 	rootCmd.AddCommand(getGetCmd(dependencies))
 
 	// set
 	setCmd := getSetCmd(dependencies)
-	setCmd.Flags().BoolP(generateFlag, "g", false, "Generate secure password")
-	length := dependencies.config.PasswordSettings.Length
-	setCmd.Flags().Int(lengthFlag, length, fmt.Sprintf("Length of generated password, by default %d", length))
+	setGenerationFlags(setCmd, dependencies.config.PasswordSettings.Length)
 	rootCmd.AddCommand(setCmd)
 
 	// list
 	listCmd := getListCmd(dependencies)
 	listCmd.Flags().BoolP("accounts", "a", false, "Print accounts as well")
 	rootCmd.AddCommand(listCmd)
+}
 
-	// gen
-	rootCmd.AddCommand(getGenCommand(dependencies))
+func setGenerationFlags(cmd *cobra.Command, defaultLength int) {
+	cmd.Flags().BoolP(generateFlag, "g", false, "Generate secure password")
+	cmd.Flags().Int(lengthFlag, defaultLength, fmt.Sprintf("Length of generated password, by default %d", defaultLength))
 }

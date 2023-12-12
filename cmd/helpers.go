@@ -8,6 +8,7 @@ import (
 	"github.com/MirToykin/passtool/internal/lib/cli"
 	"github.com/MirToykin/passtool/internal/storage/models"
 	passGenerator "github.com/sethvargo/go-password/password"
+	"github.com/spf13/cobra"
 	"gorm.io/gorm"
 	"io"
 	"log"
@@ -461,5 +462,37 @@ func getDecryptedPasswordWithRetry(
 		} else {
 			return decrypted, nil
 		}
+	}
+}
+
+// getPasswordGetterByGenerateAndLengthFlag return function for getting password based on flags -g and --length
+func getPasswordGetterByGenerateAndLengthFlag(
+	cmd *cobra.Command,
+	genFlag, lenFlag, passwordAlias string,
+	printer Printer,
+	conf *config.Config,
+) (func() (string, error), error) {
+	needGenerate, err := cmd.Flags().GetBool(genFlag)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get %s flag: %w", genFlag, err)
+	}
+
+	if needGenerate {
+		length, err := cmd.Flags().GetInt(lenFlag)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get %s flag: %w", lenFlag, err)
+		}
+
+		return func() (string, error) {
+			userPassword, err := getGeneratedPassword(length, conf, printer)
+			if err != nil {
+				return "", fmt.Errorf("unable to get generated password: %w", err)
+			}
+			return userPassword, nil
+		}, nil
+	} else {
+		return func() (string, error) {
+			return getSecretWithConfirmation(passwordAlias, "Passwords are not equal", printer), nil
+		}, nil
 	}
 }
