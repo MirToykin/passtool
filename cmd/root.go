@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/MirToykin/passtool/cmd/service"
 	"github.com/MirToykin/passtool/internal/config"
 	out "github.com/MirToykin/passtool/internal/output"
 	"github.com/MirToykin/passtool/internal/storage"
@@ -90,8 +89,8 @@ func init() {
 		printer: printer,
 	}
 
-	// service
-	rootCmd.AddCommand(service.AppServiceCmd)
+	// requirements
+	rootCmd.AddCommand(getRequirementsCmd(dependencies.config, dependencies.printer))
 
 	// add
 	rootCmd.AddCommand(getAddCmd(dependencies))

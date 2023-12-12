@@ -99,9 +99,9 @@ func Load() *Config {
 		MinPasswordLength:      6,
 		MaxPasswordLength:      100,
 		PasswordSettings: GeneratorSettings{
-			Length:      12,
-			NumDigits:   3,
-			NumSymbols:  3,
+			Length:      int(environment.getDefaultPasswordLength()),
+			NumDigits:   4,
+			NumSymbols:  4,
 			NoUpper:     false,
 			AllowRepeat: false,
 		},

@@ -55,10 +55,11 @@ func (ev EnvVar) stringVal() string {
 }
 
 var storageVar = EnvVar{
-	Name:        storageEnv,
-	Description: "Path to a directory where your encrypted data will be stored, e.g. /Users/me/passtool",
-	Type:        EnvStr,
-	Required:    true,
+	Name: storageEnv,
+	Description: `Path to a directory where your data will be stored, e.g. /Users/me/passtool.
+			    Passwords data keeps encrypted.`,
+	Type:     EnvStr,
+	Required: true,
 }
 
 var backupIndexVar = EnvVar{
@@ -77,12 +78,21 @@ var backupCountVar = EnvVar{
 	DefaultIntValue: defaultBackupCount,
 }
 
+var defaultPasswordLengthVar = EnvVar{
+	Name:            defaultPasswordLengthEnv,
+	Description:     fmt.Sprintf("Default generated password length, if not set equals %d", defaultPasswordLength),
+	Type:            EnvInt,
+	Required:        false,
+	DefaultIntValue: defaultPasswordLength,
+}
+
 type Environment struct {
-	storage     *EnvVar
-	backupIndex *EnvVar
-	backupCount *EnvVar
-	loaded      bool
-	vars        []*EnvVar
+	storage               *EnvVar
+	backupIndex           *EnvVar
+	backupCount           *EnvVar
+	defaultPasswordLength *EnvVar
+	loaded                bool
+	vars                  []*EnvVar
 }
 
 func (env *Environment) loadVars() {
@@ -119,6 +129,11 @@ func (env *Environment) getBackupCount() uint {
 	return env.backupCount.intVal()
 }
 
+func (env *Environment) getDefaultPasswordLength() uint {
+	env.mustBeLoaded()
+	return env.defaultPasswordLength.intVal()
+}
+
 func (env *Environment) mustBeLoaded() {
 	if !env.loaded {
 		log.Fatal("Environment is not loaded")
@@ -126,9 +141,10 @@ func (env *Environment) mustBeLoaded() {
 }
 
 var environment = Environment{
-	loaded:      false,
-	storage:     &storageVar,
-	backupIndex: &backupIndexVar,
-	backupCount: &backupCountVar,
-	vars:        []*EnvVar{&storageVar, &backupIndexVar, &backupCountVar},
+	loaded:                false,
+	storage:               &storageVar,
+	backupIndex:           &backupIndexVar,
+	backupCount:           &backupCountVar,
+	defaultPasswordLength: &defaultPasswordLengthVar,
+	vars:                  []*EnvVar{&storageVar, &backupIndexVar, &backupCountVar, &defaultPasswordLengthVar},
 }
