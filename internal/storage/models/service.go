@@ -61,7 +61,7 @@ func (s *Service) FetchOrCreate(db *gorm.DB, serviceName string) error {
 	return nil
 }
 
-// GetAccountsMap returns map of accounts where keys are their serial starting numbers from 1
+// GetAccountsMap returns map of accounts where keys are their serial numbers starting from 1
 func (s *Service) GetAccountsMap() map[int]Account {
 	aMap := make(map[int]Account)
 	for i, account := range s.Accounts {
@@ -69,4 +69,27 @@ func (s *Service) GetAccountsMap() map[int]Account {
 	}
 
 	return aMap
+}
+
+// GetMap returns map of services where keys are their serial numbers starting from 1
+func (s *Service) GetMap(db *gorm.DB) (map[int]Service, error) {
+	var services []Service
+	err := db.Select("id", "name").Find(&services).Error
+	if err != nil {
+		return nil, fmt.Errorf("unable to fetch services list: %w", err)
+	}
+	sMap := make(map[int]Service)
+	for i, service := range services {
+		sMap[i+1] = service
+	}
+
+	return sMap, nil
+}
+
+func (s *Service) LoadAccounts(db *gorm.DB) error {
+	err := db.Model(Account{}).Where("service_id = ?", s.ID).Find(&s.Accounts).Error
+	if err != nil {
+		return fmt.Errorf("unable to load accounts: %w", err)
+	}
+	return nil
 }

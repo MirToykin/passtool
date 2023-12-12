@@ -316,52 +316,56 @@ func fetchServiceWithAccounts(db *gorm.DB, service *models.Service, serviceName 
 	return true, nil
 }
 
-// requestExistingAccount request login from user. If login doesn't exist for the given service - retries.
-// If succeeds - loads account by login
-func requestExistingAccount(service *models.Service, printer Printer) *models.Account {
+// requestExistingModel requests name or serial number from user. If it doesn't exist for the given map or slice - retries.
+// If succeeds - returns pointer to a given object
+func requestExistingModel[M any](
+	mMap map[int]M,
+	mSlice []M,
+	getModelValue func(m M) string,
+	strIdentifier string,
+	printer Printer,
+) *M {
 	for {
-		identifier := cli.GetUserInput("Enter login or serial number: ", printer)
-		var login string
+		identifier := cli.GetUserInput(fmt.Sprintf("Enter %s or serial number: ", strIdentifier), printer)
+		var name string
 
 		num, err := strconv.Atoi(identifier)
 		if err != nil {
-			login = identifier
+			name = identifier
 		} else {
-			account, found := service.GetAccountsMap()[num]
+			model, found := mMap[num]
 			if found {
-				return &account
+				return &model
 			} else {
-				login = identifier
+				name = identifier
 			}
 		}
 
-		for _, acc := range service.Accounts {
-			if acc.Login == login {
-				return &acc
+		for _, model := range mSlice {
+			if getModelValue(model) == name {
+				return &model
 			}
 		}
 
 		printer.Warning(
-			"Account with login %q doesn't exist at service %q. Use another login or correct serial number.",
-			login,
-			service.Name,
+			"Incorrect %s %q, use another one or the correct serial number.",
+			strIdentifier,
+			name,
 		)
 	}
 }
 
-// printServiceAccounts prints accounts of the given service into console
-func printServiceAccounts(service models.Service, p Printer) {
-	p.Header("Service %q has accounts with the following logins:", service.Name)
-	accMap := service.GetAccountsMap()
-	keys := make([]int, 0, len(accMap))
+// printSortedMap prints map key and corresponding string value retrieved from map by key
+func printSortedMap[M any](target map[int]M, getStrVal func(target map[int]M, key int) string) {
+	keys := make([]int, 0, len(target))
 
-	for key := range accMap {
+	for key := range target {
 		keys = append(keys, key)
 	}
 
 	sort.Ints(keys)
 	for _, key := range keys {
-		fmt.Println(key, accMap[key].Login)
+		fmt.Println(key, getStrVal(target, key))
 	}
 
 	fmt.Println()
@@ -373,7 +377,7 @@ func genericGet(
 	printer Printer,
 	handler func(p models.Password),
 ) {
-	var service models.Service
+	var service *models.Service
 	var count int64
 
 	err := service.List(db).Count(&count).Error
@@ -383,11 +387,50 @@ func genericGet(
 		os.Exit(0)
 	}
 
-	err = requestExistingService(db, &service, printer)
+	servicesMap, err := service.GetMap(db)
 	checkSimpleErrorWithDetails(err, operation, printer)
-	printServiceAccounts(service, printer)
+	var servicesSlice []models.Service
+	for _, s := range servicesMap {
+		servicesSlice = append(servicesSlice, s)
+	}
+	printer.Header("The following services were created:")
+	printSortedMap(servicesMap, func(sMap map[int]models.Service, key int) string {
+		return sMap[key].Name
+	})
 
-	account := requestExistingAccount(&service, printer)
+	service = requestExistingModel(
+		servicesMap,
+		servicesSlice,
+		func(s models.Service) string {
+			return s.Name
+		},
+		"service name",
+		printer,
+	)
+
+	err = service.LoadAccounts(db)
+	checkSimpleErrorWithDetails(err, operation, printer)
+
+	if len(service.Accounts) == 0 {
+		printer.Simpleln("Accounts for service %q not found", service.Name)
+		os.Exit(0)
+	}
+
+	printer.Header("Service %q has accounts with the following logins:", service.Name)
+	accountsMap := service.GetAccountsMap()
+	printSortedMap(accountsMap, func(aMap map[int]models.Account, key int) string {
+		return aMap[key].Login
+	})
+
+	account := requestExistingModel(
+		accountsMap,
+		service.Accounts,
+		func(acc models.Account) string {
+			return acc.Login
+		},
+		"login",
+		printer,
+	)
 	err = account.LoadPassword(db)
 	checkSimpleErrorWithDetails(err, operation, printer)
 
