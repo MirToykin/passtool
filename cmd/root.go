@@ -109,6 +109,9 @@ func init() {
 	setGenerationFlags(setCmd, dependencies.config.PasswordSettings.Length)
 	rootCmd.AddCommand(setCmd)
 
+	// change-secret
+	rootCmd.AddCommand(getChangeSecretCmd(dependencies))
+
 	// list
 	listCmd := getListCmd(dependencies)
 	listCmd.Flags().BoolP("accounts", "a", false, "Print accounts as well")
