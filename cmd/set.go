@@ -26,7 +26,8 @@ func getSetCmd(deps AppDependencies) *cobra.Command {
 				operation,
 				deps.db,
 				deps.printer,
-				func(password models.Password) {
+				func(account models.Account) {
+					password := account.Password
 					_, err := getDecryptedPasswordWithRetry(password, deps.config.SecretKeyLength, 5, deps.printer)
 					checkSimpleErrorWithDetails(err, operation, deps.printer)
 

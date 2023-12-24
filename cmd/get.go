@@ -18,8 +18,8 @@ func getGetCmd(deps AppDependencies) *cobra.Command {
 				operation,
 				deps.db,
 				deps.printer,
-				func(password models.Password) {
-					decrypted, err := getDecryptedPasswordWithRetry(password, deps.config.SecretKeyLength, 5, deps.printer)
+				func(account models.Account) {
+					decrypted, err := getDecryptedPasswordWithRetry(account.Password, deps.config.SecretKeyLength, 5, deps.printer)
 					checkSimpleErrorWithDetails(err, operation, deps.printer)
 
 					err = clipboard.WriteAll(decrypted)

@@ -376,7 +376,8 @@ func genericGet(
 	operation string,
 	db *gorm.DB,
 	printer Printer,
-	handler func(p models.Password),
+	// models.Account passed to handler is guaranteed to be loaded and have loaded Password and Service dependencies
+	handler func(a models.Account),
 ) {
 	var service *models.Service
 	var count int64
@@ -434,8 +435,9 @@ func genericGet(
 	)
 	err = account.LoadPassword(db)
 	checkSimpleErrorWithDetails(err, operation, printer)
+	account.Service = *service
 
-	handler(account.Password)
+	handler(*account)
 }
 
 func getDecryptedPasswordWithRetry(

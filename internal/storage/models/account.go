@@ -63,3 +63,24 @@ func (a *Account) SaveWithPassword(db *gorm.DB, password *Password) error {
 
 	return nil
 }
+
+// DeleteWithPassword performs transactional deletion of password and account from database
+func (a *Account) DeleteWithPassword(db *gorm.DB) error {
+	err := db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Unscoped().Delete(&a, a.ID).Error; err != nil {
+			return err
+		}
+
+		if err := tx.Unscoped().Delete(&a.Password, a.PasswordID).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return fmt.Errorf("unable to delete account with password: %w", err)
+	}
+
+	return nil
+}

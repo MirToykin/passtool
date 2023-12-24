@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/MirToykin/passtool/internal/config"
 	out "github.com/MirToykin/passtool/internal/output"
 	"github.com/MirToykin/passtool/internal/storage"
@@ -102,6 +101,9 @@ func init() {
 	// get
 	rootCmd.AddCommand(getGetCmd(dependencies))
 
+	// del
+	rootCmd.AddCommand(getDelCmd(dependencies))
+
 	// set
 	setCmd := getSetCmd(dependencies)
 	setGenerationFlags(setCmd, dependencies.config.PasswordSettings.Length)
@@ -115,5 +117,5 @@ func init() {
 
 func setGenerationFlags(cmd *cobra.Command, defaultLength int) {
 	cmd.Flags().BoolP(generateFlag, "g", false, "Generate secure password")
-	cmd.Flags().Int(lengthFlag, defaultLength, fmt.Sprintf("Length of generated password, by default %d", defaultLength))
+	cmd.Flags().Int(lengthFlag, defaultLength, "Length of generated password")
 }

@@ -86,10 +86,36 @@ func (s *Service) GetMap(db *gorm.DB) (map[int]Service, error) {
 	return sMap, nil
 }
 
+func (s *Service) GetAccountsQuery(db *gorm.DB) *gorm.DB {
+	return db.Model(Account{}).Where("service_id = ?", s.ID)
+}
+
 func (s *Service) LoadAccounts(db *gorm.DB) error {
-	err := db.Model(Account{}).Where("service_id = ?", s.ID).Find(&s.Accounts).Error
+	err := s.GetAccountsQuery(db).Find(&s.Accounts).Error
 	if err != nil {
 		return fmt.Errorf("unable to load accounts: %w", err)
+	}
+	return nil
+}
+
+func (s *Service) AccountsCount(db *gorm.DB) (int64, error) {
+	var count int64
+
+	err := s.GetAccountsQuery(db).Count(&count).Error
+	if err != nil {
+		return 0, fmt.Errorf("unable to get accounts count: %w", err)
+	}
+
+	return count, nil
+}
+
+func (s *Service) Delete(db *gorm.DB) error {
+	if s.ID == 0 {
+		return errors.New("unable to delete service, service data not loaded")
+	}
+	err := db.Unscoped().Delete(Service{}, s.ID).Error
+	if err != nil {
+		return fmt.Errorf("unable to delete service: %w", err)
 	}
 	return nil
 }
