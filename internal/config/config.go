@@ -20,7 +20,7 @@ type Config struct {
 	EnvVariables           []EnvVar
 }
 
-// IsValid checks if config valid
+// IsValid checks if config is valid
 func (c Config) IsValid() bool {
 	for _, ev := range c.EnvVariables {
 		if ev.Required && ev.Value == "" {
@@ -52,11 +52,13 @@ func (c Config) GetOptionalEnvVars() []EnvVar {
 	return c.filterVars(false)
 }
 
+// GetBackupFilePath returns path to directory where backups are stored
 func (c Config) GetBackupFilePath() string {
 	fileName := fmt.Sprintf(c.BackupFilenameTemplate, time.Now().Unix())
 	return filepath.Join(c.BasePath, fileName)
 }
 
+// GetBackupFilePathMask returns generic mask for backup file name
 func (c Config) GetBackupFilePathMask() string {
 	return filepath.Join(c.BasePath, fmt.Sprintf(c.BackupFilenameTemplate, "*"))
 }
@@ -69,18 +71,27 @@ type GeneratorSettings struct {
 	AllowRepeat bool
 }
 
+// GetLength returns length of generated password
 func (gs GeneratorSettings) GetLength() int {
 	return gs.Length
 }
+
+// GetNumDigits returns the number of digits to use in generated password
 func (gs GeneratorSettings) GetNumDigits() int {
 	return gs.NumDigits
 }
+
+// GetNumSymbols returns the number of spec symbols to use in generated password
 func (gs GeneratorSettings) GetNumSymbols() int {
 	return gs.NumSymbols
 }
+
+// GetNoUpper whether to allow lowercase characters in generated password
 func (gs GeneratorSettings) GetNoUpper() bool {
 	return gs.NoUpper
 }
+
+// GetAllowRepeat whether to allow repeated characters in generated password
 func (gs GeneratorSettings) GetAllowRepeat() bool {
 	return gs.AllowRepeat
 }

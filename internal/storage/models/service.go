@@ -86,10 +86,12 @@ func (s *Service) GetMap(db *gorm.DB) (map[int]Service, error) {
 	return sMap, nil
 }
 
+// GetAccountsQuery returns the query of accounts for given service
 func (s *Service) GetAccountsQuery(db *gorm.DB) *gorm.DB {
 	return db.Model(Account{}).Where("service_id = ?", s.ID)
 }
 
+// LoadAccounts loads accounts for the given instance of service
 func (s *Service) LoadAccounts(db *gorm.DB) error {
 	err := s.GetAccountsQuery(db).Find(&s.Accounts).Error
 	if err != nil {
@@ -98,6 +100,7 @@ func (s *Service) LoadAccounts(db *gorm.DB) error {
 	return nil
 }
 
+// AccountsCount returns count of service accounts
 func (s *Service) AccountsCount(db *gorm.DB) (int64, error) {
 	var count int64
 
@@ -109,6 +112,7 @@ func (s *Service) AccountsCount(db *gorm.DB) (int64, error) {
 	return count, nil
 }
 
+// Delete deletes the given service from the DB
 func (s *Service) Delete(db *gorm.DB) error {
 	if s.ID == 0 {
 		return errors.New("unable to delete service, service data not loaded")

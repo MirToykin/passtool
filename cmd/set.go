@@ -54,6 +54,7 @@ func getSetCmd(deps AppDependencies) *cobra.Command {
 
 func init() {}
 
+// getGeneratedPassword returns randomly generated password
 func getGeneratedPassword(length int, config *config.Config, printer Printer) (string, error) {
 	if length < config.MinPasswordLength || length > config.MaxPasswordLength {
 		printer.Infoln("The password must be at least %d and no more than %d characters long.", config.MinPasswordLength, config.MaxPasswordLength)

@@ -22,6 +22,7 @@ func (p *Password) GetDecrypted(secret string, keyLen int) (string, error) {
 	return crypto.Decrypt(key, p.Encrypted)
 }
 
+// Save saves given password to the DB
 func (p *Password) Save(db *gorm.DB) error {
 	return db.Save(p).Error
 }

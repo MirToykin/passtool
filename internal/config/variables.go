@@ -42,6 +42,7 @@ func (ev EnvVar) intVal() uint {
 	return uint(intVal)
 }
 
+// stringVal returns string value of environment variable
 func (ev EnvVar) stringVal() string {
 	if ev.Type != EnvStr {
 		return ""
@@ -95,6 +96,7 @@ type Environment struct {
 	vars                  []*EnvVar
 }
 
+// loadVars loads variables from environment
 func (env *Environment) loadVars() {
 	for _, v := range env.vars {
 		v.Value = os.Getenv(v.Name)
@@ -103,6 +105,7 @@ func (env *Environment) loadVars() {
 	env.loaded = true
 }
 
+// getVars return slice of loaded environment variables
 func (env *Environment) getVars() []EnvVar {
 	env.mustBeLoaded()
 
@@ -114,26 +117,31 @@ func (env *Environment) getVars() []EnvVar {
 	return loadedVars
 }
 
+// getStorage returns value of storage variable
 func (env *Environment) getStorage() string {
 	env.mustBeLoaded()
 	return env.storage.stringVal()
 }
 
+// getBackupIndex returns value of backupIndex variable
 func (env *Environment) getBackupIndex() uint {
 	env.mustBeLoaded()
 	return env.backupIndex.intVal()
 }
 
+// getBackupCount returns value of backupCount variable
 func (env *Environment) getBackupCount() uint {
 	env.mustBeLoaded()
 	return env.backupCount.intVal()
 }
 
+// getDefaultPasswordLength return value of defaultPasswordLength variable
 func (env *Environment) getDefaultPasswordLength() uint {
 	env.mustBeLoaded()
 	return env.defaultPasswordLength.intVal()
 }
 
+// mustBeLoaded checks if the environment is loaded and stops the execution if not
 func (env *Environment) mustBeLoaded() {
 	if !env.loaded {
 		log.Fatal("Environment is not loaded")

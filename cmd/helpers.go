@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"github.com/MirToykin/passtool/internal/config"
 	"github.com/MirToykin/passtool/internal/crypto"
@@ -78,13 +77,6 @@ func getSecretWithConfirmation(secretName string, retryMsg string, printer Print
 func checkSimpleErrorWithDetails(err error, msg string, p Printer) {
 	if err != nil {
 		p.ErrorWithExit("%s: %v", msg, err)
-	}
-}
-
-// checkSimpleError handles general error and prints message to the console.
-func checkSimpleError(err error, msg string, p Printer) {
-	if err != nil {
-		p.ErrorWithExit(msg)
 	}
 }
 
@@ -235,88 +227,6 @@ func clearUnnecessaryBackups(
 	errChan <- nil
 }
 
-func genericAdd(
-	operation string,
-	deps AppDependencies,
-	getPassword func() string,
-) {
-	var service models.Service
-	serviceName := cli.GetUserInput("Enter service name: ", deps.printer)
-	err := service.FetchOrCreate(deps.db, serviceName)
-	checkSimpleErrorWithDetails(err, operation, deps.printer)
-
-	var account models.Account
-	login, err := requestUniqueLoginForService(&account, service, deps.printer, deps.db)
-	checkSimpleErrorWithDetails(err, operation, deps.printer)
-
-	account.Service = service
-	account.Login = login
-
-	var password models.Password
-	userPassword := getPassword()
-	secretKey := getSecretWithConfirmation("secret key", "Secret keys are not equal", deps.printer)
-
-	err = encryptPassword(&password, userPassword, secretKey, deps.config.SecretKeyLength, deps.config.PasswordSettings)
-	checkSimpleErrorWithDetails(err, operation, deps.printer)
-
-	err = account.SaveWithPassword(deps.db, &password)
-	checkSimpleErrorWithDetails(err, operation, deps.printer)
-
-	wg := sync.WaitGroup{}
-	errChan := make(chan error, 2)
-
-	if checkIfBackupNeeded(password.ID, deps.config.BackupIndex) {
-		wg.Add(2)
-		go createBackup(&wg, deps.config, errChan, deps.printer)
-		go clearUnnecessaryBackups(&wg, errChan, deps.config, deps.printer)
-	}
-
-	deps.printer.Success("Successfully added password for account with login %q at %q", login, serviceName)
-
-	wg.Wait()
-	close(errChan)
-
-	for err = range errChan {
-		if err != nil {
-			deps.printer.Warning("failed to handle backup: %v", err)
-		}
-	}
-}
-
-// requestExistingService queries for an existing service name until it gets one.
-// If succeeds - loads service with its accounts
-func requestExistingService(db *gorm.DB, service *models.Service, p Printer) error {
-	for {
-		serviceName := cli.GetUserInput("Enter service name: ", p)
-
-		ok, err := fetchServiceWithAccounts(db, service, serviceName)
-		if err != nil {
-			return fmt.Errorf("failed to request existing service: %w", err)
-		}
-
-		if !ok {
-			p.Warning("Service with name %q not found, try again", serviceName)
-		} else {
-			return nil
-		}
-	}
-}
-
-// fetchServiceWithAccounts tries to fetch service
-func fetchServiceWithAccounts(db *gorm.DB, service *models.Service, serviceName string) (bool, error) {
-	err := service.FetchByName(db, serviceName, true)
-
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return false, nil
-	}
-
-	if err != nil {
-		return false, fmt.Errorf("unable to fetch service: %w", err)
-	}
-
-	return true, nil
-}
-
 // requestExistingModel requests name or serial number from user. If it doesn't exist for the given map or slice - retries.
 // If succeeds - returns pointer to a given object
 func requestExistingModel[M any](
@@ -372,6 +282,7 @@ func printSortedMap[M any](target map[int]M, getStrVal func(target map[int]M, ke
 	fmt.Println()
 }
 
+// genericGet - generic function which retrieves service account and secret phrase from user
 func genericGet(
 	operation string,
 	db *gorm.DB,
@@ -440,6 +351,7 @@ func genericGet(
 	handler(*account)
 }
 
+// getDecryptedPasswordWithRetry requests secret key from user to decode the given password (performs retries)
 func getDecryptedPasswordWithRetry(
 	password models.Password,
 	keyLen int,

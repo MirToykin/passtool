@@ -118,6 +118,7 @@ func init() {
 	rootCmd.AddCommand(listCmd)
 }
 
+// setGenerationFlags sets flags related to password generation to the given command
 func setGenerationFlags(cmd *cobra.Command, defaultLength int) {
 	cmd.Flags().BoolP(generateFlag, "g", false, "Generate secure password")
 	cmd.Flags().Int(lengthFlag, defaultLength, "Length of generated password")
